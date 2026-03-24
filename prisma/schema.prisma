@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CategoryStyle {
+  CARD
+  LIST
+}
+
+enum PublisherType {
+  ADMIN
+  GUEST
+}
+
+enum SiteStatus {
+  APPROVED
+  HIDDEN
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  style       CategoryStyle @default(CARD)
+  sortOrder   Int           @default(0)
+  isPublished Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  sites       Site[]
+  submissions Submission[]
+}
+
+model Site {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  url           String
+  coverImageUrl String?
+  fallbackColor String?
+  likes         Int           @default(0)
+  views         Int           @default(0)
+  status        SiteStatus    @default(APPROVED)
+  publisherType PublisherType @default(ADMIN)
+  publisherName String        @default("管理员")
+  publishedAt   DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  tags Tag[]
+
+  @@index([categoryId])
+  @@index([publishedAt(sort: Desc)])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+
+  sites Site[]
+
+  @@unique([name])
+}
+
+model Submission {
+  id            String           @id @default(cuid())
+  title         String
+  description   String
+  url           String
+  coverImageUrl String?
+  fallbackColor String?
+  proposerName  String
+  contact       String?
+  status        SubmissionStatus @default(PENDING)
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  tags String[]
+
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
