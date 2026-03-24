@@ -92,5 +92,6 @@ prisma/
 
 - 参考 [DEPLOY.md](./DEPLOY.md)
 - 一键发布脚本：`deploy.sh`（`/opt/apps/nav.lengziyu.cn` 目录执行）
+- 静态更新脚本：`update-static.sh`（只构建并重启，不跑数据库）
 - Nginx 模板：`deploy/nginx/nav.lengziyu.cn.conf`
 - PM2 模板：`deploy/pm2/ecosystem.config.cjs`

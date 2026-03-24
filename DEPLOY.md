@@ -44,6 +44,13 @@ cd /opt/apps/nav.lengziyu.cn
 bash ./deploy.sh
 ```
 
+## 4.1 只更新静态（不动数据库）
+
+```bash
+cd /opt/apps/nav.lengziyu.cn
+bash ./update-static.sh
+```
+
 ## 5. Nginx（同 LifeShots 风格）
 
 ```bash

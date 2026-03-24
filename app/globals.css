@@ -40,8 +40,11 @@ a {
 }
 
 .nav-page {
-  min-height: 100vh;
+  height: 100vh;
   padding: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .nav-header {
@@ -54,6 +57,10 @@ a {
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: 0 8px 24px rgba(13, 30, 65, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
 }
 
 .brand-wrap {
@@ -146,6 +153,9 @@ a {
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
   gap: 14px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .category-panel,
@@ -162,6 +172,10 @@ a {
 
 .category-panel {
   padding: 12px;
+  position: sticky;
+  top: 0;
+  height: 100%;
+  overflow: auto;
 }
 
 .panel-title {
@@ -197,6 +211,8 @@ a {
 .content-panel {
   padding: 16px;
   min-height: 640px;
+  height: 100%;
+  overflow: auto;
 }
 
 .content-head h2 {
@@ -707,8 +723,11 @@ a {
 }
 
 .admin-shell {
-  min-height: 100vh;
+  height: 100vh;
   padding: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-topbar {
@@ -717,6 +736,10 @@ a {
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
 }
 
 .admin-topbar-left {
@@ -752,10 +775,17 @@ a {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 12px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .admin-sidebar {
   padding: 12px;
+  position: sticky;
+  top: 0;
+  height: 100%;
+  overflow: auto;
 }
 
 .admin-sidebar-title {
@@ -789,6 +819,8 @@ a {
 
 .admin-main {
   padding: 12px;
+  height: 100%;
+  overflow: auto;
 }
 
 .admin-panel-group {
@@ -1038,9 +1070,26 @@ a {
 }
 
 @media (max-width: 980px) {
+  .nav-page,
+  .admin-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .nav-body,
   .admin-layout {
     grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .category-panel,
+  .content-panel,
+  .admin-sidebar,
+  .admin-main {
+    position: static;
+    height: auto;
+    overflow: visible;
   }
 
   .site-card-grid,
