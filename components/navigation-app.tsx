@@ -288,17 +288,18 @@ export default function NavigationApp() {
                         <Eye size={14} />
                         {site.views}
                       </small>
-                      <small>
+                      <button
+                        type="button"
+                        className="site-inline-like"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void onLike(site.id);
+                        }}
+                      >
                         <Heart size={14} />
                         {site.likes}
-                      </small>
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="site-list-actions" onClick={(event) => event.stopPropagation()}>
-                    <button type="button" className="site-like-btn" onClick={() => void onLike(site.id)}>
-                      <Heart size={15} />
-                    </button>
                   </div>
                 </article>
               ))}

@@ -87,3 +87,10 @@ prisma/
 - 增加防刷（IP 限流、点赞去重）
 - 为 SEO 增加站点地图与结构化数据
 - 增加 Playwright E2E 测试
+
+## 生产部署
+
+- 参考 [DEPLOY.md](./DEPLOY.md)
+- 一键发布脚本：`deploy.sh`（`/opt/apps/nav.lengziyu.cn` 目录执行）
+- Nginx 模板：`deploy/nginx/nav.lengziyu.cn.conf`
+- PM2 模板：`deploy/pm2/ecosystem.config.cjs`
