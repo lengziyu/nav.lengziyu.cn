@@ -28,6 +28,8 @@ export const createSiteSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(20)).max(8).default([]),
 });
 
+export const updateSiteSchema = createSiteSchema;
+
 export const reviewSubmissionSchema = z.object({
   action: z.enum(["approve", "reject"]),
   reviewNote: z.string().trim().max(200).optional(),

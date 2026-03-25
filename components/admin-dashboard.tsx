@@ -52,9 +52,16 @@ type AdminSubmission = {
 type AdminSite = {
   id: string;
   title: string;
+  description: string;
   url: string;
+  coverImageUrl: string | null;
   likes: number;
   views: number;
+  tags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
   category: {
     id: string;
     name: string;
@@ -92,6 +99,7 @@ export default function AdminDashboard() {
   const [siteCoverImage, setSiteCoverImage] = useState("");
   const [siteCategoryId, setSiteCategoryId] = useState("");
   const [siteTags, setSiteTags] = useState("");
+  const [editingSiteId, setEditingSiteId] = useState("");
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
 
@@ -222,6 +230,34 @@ export default function AdminDashboard() {
     }
   }
 
+  function parseTagInput(raw: string) {
+    return raw
+      .split(/[,，\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function resetSiteForm() {
+    setSiteTitle("");
+    setSiteDescription("");
+    setSiteUrl("");
+    setSiteCoverImage("");
+    setSiteTags("");
+    setEditingSiteId("");
+  }
+
+  function onPickEditSite(site: AdminSite) {
+    setEditingSiteId(site.id);
+    setSiteTitle(site.title);
+    setSiteDescription(site.description);
+    setSiteUrl(site.url);
+    setSiteCoverImage(site.coverImageUrl ?? "");
+    setSiteCategoryId(site.category.id);
+    setSiteTags(site.tags.map((tag) => tag.name).join(", "));
+    setActiveMenu("publish");
+    setMessage(`正在编辑：${site.title}`);
+  }
+
   async function onCreateSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -235,22 +271,45 @@ export default function AdminDashboard() {
           url: siteUrl,
           coverImageUrl: siteCoverImage || undefined,
           categoryId: siteCategoryId,
-          tags: siteTags
-            .split(/[,，\s]+/)
-            .map((item) => item.trim())
-            .filter(Boolean),
+          tags: parseTagInput(siteTags),
         }),
       });
 
-      setSiteTitle("");
-      setSiteDescription("");
-      setSiteUrl("");
-      setSiteCoverImage("");
-      setSiteTags("");
+      resetSiteForm();
       setMessage("站点发布成功");
       await refreshData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "站点发布失败");
+    }
+  }
+
+  async function onUpdateSite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+
+    if (!editingSiteId) {
+      setMessage("请先选择要编辑的站点");
+      return;
+    }
+
+    try {
+      await fetchJson<{ site: AdminSite }>(`/api/admin/sites/${editingSiteId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: siteTitle,
+          description: siteDescription,
+          url: siteUrl,
+          coverImageUrl: siteCoverImage || undefined,
+          categoryId: siteCategoryId,
+          tags: parseTagInput(siteTags),
+        }),
+      });
+
+      resetSiteForm();
+      setMessage("站点更新成功");
+      await refreshData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "站点更新失败");
     }
   }
 
@@ -501,8 +560,8 @@ export default function AdminDashboard() {
           {activeMenu === "publish" ? (
             <section className="admin-panel-group">
               <section className="admin-card">
-                <h2>管理员发布站点</h2>
-                <form className="admin-form admin-form-grid" onSubmit={onCreateSite}>
+                <h2>{editingSiteId ? "编辑站点" : "管理员发布站点"}</h2>
+                <form className="admin-form admin-form-grid" onSubmit={editingSiteId ? onUpdateSite : onCreateSite}>
                   <input
                     className="field-half"
                     required
@@ -550,9 +609,30 @@ export default function AdminDashboard() {
                     onChange={(event) => setSiteTags(event.target.value)}
                   />
                   <button className="field-third" type="submit">
-                    发布站点
+                    {editingSiteId ? "保存修改" : "发布站点"}
                   </button>
+                  {editingSiteId ? (
+                    <button className="field-third btn-ghost" type="button" onClick={() => resetSiteForm()}>
+                      取消编辑
+                    </button>
+                  ) : null}
                 </form>
+              </section>
+
+              <section className="admin-card full-width">
+                <h2>已发布站点（点击编辑）</h2>
+                <div className="site-table">
+                  {sites.slice(0, 80).map((site) => (
+                    <div key={site.id} className="site-table-row site-table-row-edit">
+                      <strong>{site.title}</strong>
+                      <span>{site.category.name}</span>
+                      <span>{site.tags.map((tag) => tag.name).join(" / ") || "-"}</span>
+                      <button type="button" className="btn-ghost" onClick={() => onPickEditSite(site)}>
+                        编辑
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </section>
             </section>
           ) : null}
