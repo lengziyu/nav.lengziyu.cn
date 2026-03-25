@@ -49,7 +49,6 @@ npm run dev
 后台登录密码由环境变量控制：
 
 - `ADMIN_PASSWORD`
-- `OLLAMA_BASE_URL`（可选，默认 `http://127.0.0.1:11434`，用于后台 AI 链接解析）
 - `OPENROUTER_API_KEY`（可选，使用 OpenRouter 云模型时需要）
 - `GEMINI_API_KEY`（可选，使用 Gemini 云模型时需要）
 

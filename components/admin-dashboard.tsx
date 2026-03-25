@@ -19,7 +19,7 @@ import {
 type CategoryStyle = "CARD" | "LIST";
 type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminMenuKey = "overview" | "categories" | "publish" | "review";
-type AiProvider = "ollama" | "openrouter" | "gemini";
+type AiProvider = "openrouter" | "gemini";
 
 type AdminCategory = {
   id: string;
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
   const [publishPage, setPublishPage] = useState(1);
   const [aiAnalyzeUrl, setAiAnalyzeUrl] = useState("");
   const [aiModels, setAiModels] = useState<string[]>([]);
-  const [aiProvider, setAiProvider] = useState<AiProvider>("ollama");
+  const [aiProvider, setAiProvider] = useState<AiProvider>("openrouter");
   const [aiModel, setAiModel] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
       return;
     }
     if (!aiModel) {
-      setAiMessage("请先选择 Ollama 模型");
+      setAiMessage("请先选择模型");
       return;
     }
 
@@ -890,7 +890,6 @@ export default function AdminDashboard() {
                   <strong>AI 链接解析</strong>
                   <div className="ai-assist-row">
                     <select value={aiProvider} onChange={(event) => setAiProvider(event.target.value as AiProvider)}>
-                      <option value="ollama">Ollama（本地）</option>
                       <option value="openrouter">OpenRouter（云）</option>
                       <option value="gemini">Gemini（云）</option>
                     </select>
