@@ -78,6 +78,7 @@ const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
 ];
 
 const CHART_COLORS = ["#4f8cff", "#ff8a3d", "#53c2aa", "#8f7dff", "#ff6c8f", "#2b9dff"];
+const PUBLISH_PAGE_SIZE = 12;
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -100,6 +101,10 @@ export default function AdminDashboard() {
   const [siteCategoryId, setSiteCategoryId] = useState("");
   const [siteTags, setSiteTags] = useState("");
   const [editingSiteId, setEditingSiteId] = useState("");
+  const [siteModalOpen, setSiteModalOpen] = useState(false);
+  const [siteModalMode, setSiteModalMode] = useState<"create" | "edit">("create");
+  const [publishCategoryFilter, setPublishCategoryFilter] = useState("all");
+  const [publishPage, setPublishPage] = useState(1);
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
 
@@ -140,6 +145,20 @@ export default function AdminDashboard() {
         likes: site.likes,
       }));
   }, [sites]);
+
+  const filteredPublishSites = useMemo(() => {
+    if (publishCategoryFilter === "all") {
+      return sites;
+    }
+    return sites.filter((site) => site.category.id === publishCategoryFilter);
+  }, [publishCategoryFilter, sites]);
+
+  const publishTotalPages = Math.max(1, Math.ceil(filteredPublishSites.length / PUBLISH_PAGE_SIZE));
+
+  const pagedPublishSites = useMemo(() => {
+    const start = (publishPage - 1) * PUBLISH_PAGE_SIZE;
+    return filteredPublishSites.slice(start, start + PUBLISH_PAGE_SIZE);
+  }, [filteredPublishSites, publishPage]);
 
   const fetchJson = useCallback(
     async <T,>(path: string, init?: RequestInit) => {
@@ -206,6 +225,16 @@ export default function AdminDashboard() {
     void refreshData();
   }, [refreshData]);
 
+  useEffect(() => {
+    setPublishPage(1);
+  }, [publishCategoryFilter]);
+
+  useEffect(() => {
+    if (publishPage > publishTotalPages) {
+      setPublishPage(publishTotalPages);
+    }
+  }, [publishPage, publishTotalPages]);
+
   async function onCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -246,16 +275,29 @@ export default function AdminDashboard() {
     setEditingSiteId("");
   }
 
+  function onOpenCreateSiteModal() {
+    resetSiteForm();
+    setSiteModalMode("create");
+    setSiteCategoryId((prev) => prev || categories[0]?.id || "");
+    setSiteModalOpen(true);
+  }
+
+  function onCloseSiteModal() {
+    setSiteModalOpen(false);
+    resetSiteForm();
+  }
+
   function onPickEditSite(site: AdminSite) {
     setEditingSiteId(site.id);
+    setSiteModalMode("edit");
     setSiteTitle(site.title);
     setSiteDescription(site.description);
     setSiteUrl(site.url);
     setSiteCoverImage(site.coverImageUrl ?? "");
     setSiteCategoryId(site.category.id);
     setSiteTags(site.tags.map((tag) => tag.name).join(", "));
-    setActiveMenu("publish");
-    setMessage(`正在编辑：${site.title}`);
+    setSiteModalOpen(true);
+    setMessage("");
   }
 
   async function onCreateSite(event: FormEvent<HTMLFormElement>) {
@@ -276,6 +318,7 @@ export default function AdminDashboard() {
       });
 
       resetSiteForm();
+      setSiteModalOpen(false);
       setMessage("站点发布成功");
       await refreshData();
     } catch (error) {
@@ -306,6 +349,7 @@ export default function AdminDashboard() {
       });
 
       resetSiteForm();
+      setSiteModalOpen(false);
       setMessage("站点更新成功");
       await refreshData();
     } catch (error) {
@@ -559,70 +603,29 @@ export default function AdminDashboard() {
 
           {activeMenu === "publish" ? (
             <section className="admin-panel-group">
-              <section className="admin-card">
-                <h2>{editingSiteId ? "编辑站点" : "管理员发布站点"}</h2>
-                <form className="admin-form admin-form-grid" onSubmit={editingSiteId ? onUpdateSite : onCreateSite}>
-                  <input
-                    className="field-half"
-                    required
-                    value={siteTitle}
-                    placeholder="站点标题"
-                    onChange={(event) => setSiteTitle(event.target.value)}
-                  />
-                  <input
-                    className="field-half"
-                    required
-                    value={siteUrl}
-                    placeholder="站点 URL"
-                    onChange={(event) => setSiteUrl(event.target.value)}
-                  />
-                  <textarea
-                    className="field-full"
-                    required
-                    value={siteDescription}
-                    placeholder="站点描述"
-                    onChange={(event) => setSiteDescription(event.target.value)}
-                  />
-                  <input
-                    className="field-half"
-                    value={siteCoverImage}
-                    placeholder="封面 URL（可选）"
-                    onChange={(event) => setSiteCoverImage(event.target.value)}
-                  />
-                  <select
-                    className="field-third"
-                    required
-                    value={siteCategoryId}
-                    onChange={(event) => setSiteCategoryId(event.target.value)}
-                  >
-                    <option value="">请选择分类</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    className="field-third"
-                    value={siteTags}
-                    placeholder="标签，逗号分隔"
-                    onChange={(event) => setSiteTags(event.target.value)}
-                  />
-                  <button className="field-third" type="submit">
-                    {editingSiteId ? "保存修改" : "发布站点"}
-                  </button>
-                  {editingSiteId ? (
-                    <button className="field-third btn-ghost" type="button" onClick={() => resetSiteForm()}>
-                      取消编辑
-                    </button>
-                  ) : null}
-                </form>
-              </section>
-
               <section className="admin-card full-width">
-                <h2>已发布站点（点击编辑）</h2>
+                <div className="admin-site-toolbar">
+                  <h2>站点管理</h2>
+                  <div className="admin-site-toolbar-actions">
+                    <select
+                      value={publishCategoryFilter}
+                      onChange={(event) => setPublishCategoryFilter(event.target.value)}
+                    >
+                      <option value="all">全部分类</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn-primary" onClick={onOpenCreateSiteModal}>
+                      新增站点
+                    </button>
+                  </div>
+                </div>
+
                 <div className="site-table">
-                  {sites.slice(0, 80).map((site) => (
+                  {pagedPublishSites.map((site) => (
                     <div key={site.id} className="site-table-row site-table-row-edit">
                       <strong>{site.title}</strong>
                       <span>{site.category.name}</span>
@@ -632,6 +635,33 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   ))}
+                  {!loading && filteredPublishSites.length === 0 ? (
+                    <div className="admin-empty">当前分类下暂无站点</div>
+                  ) : null}
+                </div>
+
+                <div className="admin-pagination">
+                  <small>
+                    共 {filteredPublishSites.length} 条，第 {publishPage}/{publishTotalPages} 页
+                  </small>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      disabled={publishPage <= 1}
+                      onClick={() => setPublishPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      上一页
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      disabled={publishPage >= publishTotalPages}
+                      onClick={() => setPublishPage((prev) => Math.min(publishTotalPages, prev + 1))}
+                    >
+                      下一页
+                    </button>
+                  </div>
                 </div>
               </section>
             </section>
@@ -688,6 +718,73 @@ export default function AdminDashboard() {
                 </div>
               </section>
             </section>
+          ) : null}
+
+          {siteModalOpen ? (
+            <div className="modal-mask" onClick={onCloseSiteModal}>
+              <div className="modal-panel admin-site-modal" onClick={(event) => event.stopPropagation()}>
+                <h3>{siteModalMode === "edit" ? "编辑站点" : "新增站点"}</h3>
+                <p>填写站点信息后保存，支持分类和标签。</p>
+
+                <form className="admin-form admin-form-grid" onSubmit={siteModalMode === "edit" ? onUpdateSite : onCreateSite}>
+                  <input
+                    className="field-half"
+                    required
+                    value={siteTitle}
+                    placeholder="站点标题"
+                    onChange={(event) => setSiteTitle(event.target.value)}
+                  />
+                  <input
+                    className="field-half"
+                    required
+                    value={siteUrl}
+                    placeholder="站点 URL"
+                    onChange={(event) => setSiteUrl(event.target.value)}
+                  />
+                  <textarea
+                    className="field-full"
+                    required
+                    value={siteDescription}
+                    placeholder="站点描述"
+                    onChange={(event) => setSiteDescription(event.target.value)}
+                  />
+                  <input
+                    className="field-half"
+                    value={siteCoverImage}
+                    placeholder="封面 URL（可选）"
+                    onChange={(event) => setSiteCoverImage(event.target.value)}
+                  />
+                  <select
+                    className="field-third"
+                    required
+                    value={siteCategoryId}
+                    onChange={(event) => setSiteCategoryId(event.target.value)}
+                  >
+                    <option value="">请选择分类</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="field-third"
+                    value={siteTags}
+                    placeholder="标签，逗号分隔"
+                    onChange={(event) => setSiteTags(event.target.value)}
+                  />
+
+                  <div className="field-full modal-actions">
+                    <button type="button" className="btn-ghost" onClick={onCloseSiteModal}>
+                      取消
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      {siteModalMode === "edit" ? "保存修改" : "新增站点"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           ) : null}
         </main>
       </div>

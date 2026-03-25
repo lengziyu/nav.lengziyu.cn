@@ -866,6 +866,30 @@ a {
   font-size: 18px;
 }
 
+.admin-site-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-site-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-site-toolbar-actions select {
+  min-width: 180px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+}
+
 .chart-card {
   min-height: 330px;
 }
@@ -912,6 +936,30 @@ a {
   width: 100%;
 }
 
+.admin-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-pagination small {
+  color: var(--text-sub);
+}
+
+.admin-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .category-list,
 .site-table,
 .submission-list {
@@ -940,6 +988,10 @@ a {
 .site-table-row-edit .btn-ghost {
   justify-self: end;
   padding: 6px 12px;
+}
+
+.admin-site-modal {
+  width: min(760px, 100%);
 }
 
 .submission-item {
@@ -1117,6 +1169,15 @@ a {
 
   .site-table-row-edit {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-site-toolbar-actions {
+    width: 100%;
+  }
+
+  .admin-site-toolbar-actions select {
+    flex: 1;
+    min-width: 160px;
   }
 }
 
