@@ -10,6 +10,14 @@ cd "$APP_DIR"
 # 只更新前端静态/样式相关变更：不执行 Prisma / 不动数据库
 git pull
 
+# 加载 .env，避免 pm2 --update-env 覆盖掉 OPENROUTER_API_KEY / GEMINI_API_KEY
+if [ -f ".env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 if command -v cnpm >/dev/null 2>&1; then
   cnpm i
 else
