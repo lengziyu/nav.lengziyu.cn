@@ -105,6 +105,18 @@ export default function AdminDashboard() {
   const [siteModalMode, setSiteModalMode] = useState<"create" | "edit">("create");
   const [publishCategoryFilter, setPublishCategoryFilter] = useState("all");
   const [publishPage, setPublishPage] = useState(1);
+  const [aiAnalyzeUrl, setAiAnalyzeUrl] = useState("");
+  const [aiModels, setAiModels] = useState<string[]>([]);
+  const [aiModel, setAiModel] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
+  const [autoCreateCategory, setAutoCreateCategory] = useState(true);
+  const [suggestedCategoryName, setSuggestedCategoryName] = useState("");
+  const [suggestedCategoryStyle, setSuggestedCategoryStyle] = useState<CategoryStyle>("CARD");
+  const [quickCategoryModalOpen, setQuickCategoryModalOpen] = useState(false);
+  const [quickCategoryName, setQuickCategoryName] = useState("");
+  const [quickCategoryDescription, setQuickCategoryDescription] = useState("");
+  const [quickCategoryStyle, setQuickCategoryStyle] = useState<CategoryStyle>("CARD");
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
 
@@ -235,6 +247,26 @@ export default function AdminDashboard() {
     }
   }, [publishPage, publishTotalPages]);
 
+  useEffect(() => {
+    if (activeMenu !== "publish" || aiModels.length > 0) {
+      return;
+    }
+
+    void fetchJson<{ models: string[]; message?: string }>("/api/admin/ai/models")
+      .then((result) => {
+        setAiModels(result.models ?? []);
+        if (!aiModel && result.models?.[0]) {
+          setAiModel(result.models[0]);
+        }
+        if (result.message) {
+          setAiMessage(result.message);
+        }
+      })
+      .catch((error) => {
+        setAiMessage(error instanceof Error ? error.message : "模型加载失败");
+      });
+  }, [activeMenu, aiModel, aiModels.length, fetchJson]);
+
   async function onCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -273,6 +305,10 @@ export default function AdminDashboard() {
     setSiteCoverImage("");
     setSiteTags("");
     setEditingSiteId("");
+    setAiAnalyzeUrl("");
+    setAiMessage("");
+    setSuggestedCategoryName("");
+    setSuggestedCategoryStyle("CARD");
   }
 
   function onOpenCreateSiteModal() {
@@ -300,11 +336,126 @@ export default function AdminDashboard() {
     setMessage("");
   }
 
+  async function onAnalyzeUrl() {
+    setAiMessage("");
+    if (!aiAnalyzeUrl.trim()) {
+      setAiMessage("请先输入要解析的链接");
+      return;
+    }
+    if (!aiModel) {
+      setAiMessage("请先选择 Ollama 模型");
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const result = await fetchJson<{
+        message?: string;
+        data?: {
+          title: string;
+          description: string;
+          tags: string[];
+          coverImageUrl: string;
+          categoryName: string;
+          categoryStyle: CategoryStyle;
+          matchedCategoryId: string;
+        };
+      }>("/api/admin/ai/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+          url: aiAnalyzeUrl.trim(),
+          model: aiModel,
+        }),
+      });
+
+      const data = result.data;
+      if (!data) {
+        setAiMessage(result.message || "AI 返回为空");
+        return;
+      }
+
+      setSiteTitle(data.title || "");
+      setSiteDescription(data.description || "");
+      setSiteUrl(aiAnalyzeUrl.trim());
+      if (data.coverImageUrl) {
+        setSiteCoverImage(data.coverImageUrl);
+      }
+      setSiteTags((data.tags ?? []).join(", "));
+      setSuggestedCategoryName(data.categoryName || "");
+      setSuggestedCategoryStyle(data.categoryStyle || "CARD");
+
+      if (data.matchedCategoryId) {
+        setSiteCategoryId(data.matchedCategoryId);
+        setAiMessage(`AI 已匹配分类：${data.categoryName}`);
+      } else if (data.categoryName) {
+        setSiteCategoryId("");
+        setAiMessage(`AI 推荐新分类：${data.categoryName}（可自动创建）`);
+      } else {
+        setAiMessage(result.message || "AI 解析完成，请检查并微调后保存");
+      }
+    } catch (error) {
+      setAiMessage(error instanceof Error ? error.message : "AI 解析失败");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function ensureSiteCategoryId() {
+    if (siteCategoryId) {
+      return siteCategoryId;
+    }
+
+    const newCategoryName = suggestedCategoryName.trim();
+    if (!autoCreateCategory || !newCategoryName) {
+      throw new Error("请先选择分类，或启用自动创建分类");
+    }
+
+    const created = await fetchJson<{ category: AdminCategory }>("/api/admin/categories", {
+      method: "POST",
+      body: JSON.stringify({
+        name: newCategoryName,
+        description: "AI 自动识别创建",
+        style: suggestedCategoryStyle,
+      }),
+    });
+
+    setCategories((prev) => [created.category, ...prev]);
+    setSiteCategoryId(created.category.id);
+    return created.category.id;
+  }
+
+  async function onCreateCategoryQuick(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+
+    try {
+      await fetchJson<{ category: AdminCategory }>("/api/admin/categories", {
+        method: "POST",
+        body: JSON.stringify({
+          name: quickCategoryName,
+          description: quickCategoryDescription,
+          style: quickCategoryStyle,
+        }),
+      });
+
+      setQuickCategoryName("");
+      setQuickCategoryDescription("");
+      setQuickCategoryStyle("CARD");
+      setQuickCategoryModalOpen(false);
+      setMessage("分类创建成功");
+      await refreshData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "分类创建失败");
+    }
+  }
+
   async function onCreateSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
 
     try {
+      const resolvedCategoryId = await ensureSiteCategoryId();
+
       await fetchJson<{ site: AdminSite }>("/api/admin/sites", {
         method: "POST",
         body: JSON.stringify({
@@ -312,7 +463,7 @@ export default function AdminDashboard() {
           description: siteDescription,
           url: siteUrl,
           coverImageUrl: siteCoverImage || undefined,
-          categoryId: siteCategoryId,
+          categoryId: resolvedCategoryId,
           tags: parseTagInput(siteTags),
         }),
       });
@@ -336,6 +487,8 @@ export default function AdminDashboard() {
     }
 
     try {
+      const resolvedCategoryId = await ensureSiteCategoryId();
+
       await fetchJson<{ site: AdminSite }>(`/api/admin/sites/${editingSiteId}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -343,7 +496,7 @@ export default function AdminDashboard() {
           description: siteDescription,
           url: siteUrl,
           coverImageUrl: siteCoverImage || undefined,
-          categoryId: siteCategoryId,
+          categoryId: resolvedCategoryId,
           tags: parseTagInput(siteTags),
         }),
       });
@@ -621,6 +774,9 @@ export default function AdminDashboard() {
                     <button type="button" className="btn-primary" onClick={onOpenCreateSiteModal}>
                       新增站点
                     </button>
+                    <button type="button" className="btn-ghost" onClick={() => setQuickCategoryModalOpen(true)}>
+                      新增分类
+                    </button>
                   </div>
                 </div>
 
@@ -726,6 +882,39 @@ export default function AdminDashboard() {
                 <h3>{siteModalMode === "edit" ? "编辑站点" : "新增站点"}</h3>
                 <p>填写站点信息后保存，支持分类和标签。</p>
 
+                <div className="ai-assist-panel">
+                  <strong>AI 链接解析</strong>
+                  <div className="ai-assist-row">
+                    <input
+                      value={aiAnalyzeUrl}
+                      placeholder="粘贴 GitHub / 官网链接，例如 https://github.com/vercel/next.js"
+                      onChange={(event) => setAiAnalyzeUrl(event.target.value)}
+                    />
+                    <select value={aiModel} onChange={(event) => setAiModel(event.target.value)}>
+                      <option value="">请选择模型</option>
+                      {aiModels.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn-ghost" disabled={aiLoading} onClick={() => void onAnalyzeUrl()}>
+                      {aiLoading ? "分析中..." : "AI 分析"}
+                    </button>
+                  </div>
+                  {suggestedCategoryName ? (
+                    <label className="ai-assist-check">
+                      <input
+                        type="checkbox"
+                        checked={autoCreateCategory}
+                        onChange={(event) => setAutoCreateCategory(event.target.checked)}
+                      />
+                      自动创建分类：{suggestedCategoryName}（{suggestedCategoryStyle === "CARD" ? "卡片" : "列表"}）
+                    </label>
+                  ) : null}
+                  {aiMessage ? <small>{aiMessage}</small> : null}
+                </div>
+
                 <form className="admin-form admin-form-grid" onSubmit={siteModalMode === "edit" ? onUpdateSite : onCreateSite}>
                   <input
                     className="field-half"
@@ -780,6 +969,46 @@ export default function AdminDashboard() {
                     </button>
                     <button type="submit" className="btn-primary">
                       {siteModalMode === "edit" ? "保存修改" : "新增站点"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          ) : null}
+
+          {quickCategoryModalOpen ? (
+            <div className="modal-mask" onClick={() => setQuickCategoryModalOpen(false)}>
+              <div className="modal-panel" onClick={(event) => event.stopPropagation()}>
+                <h3>新增分类</h3>
+                <p>创建后可直接用于站点新增与 AI 自动归类。</p>
+                <form className="admin-form admin-form-grid" onSubmit={onCreateCategoryQuick}>
+                  <input
+                    className="field-half"
+                    required
+                    value={quickCategoryName}
+                    placeholder="分类名，例如 AI 工作流"
+                    onChange={(event) => setQuickCategoryName(event.target.value)}
+                  />
+                  <input
+                    className="field-half"
+                    value={quickCategoryDescription}
+                    placeholder="分类说明（可选）"
+                    onChange={(event) => setQuickCategoryDescription(event.target.value)}
+                  />
+                  <select
+                    className="field-third"
+                    value={quickCategoryStyle}
+                    onChange={(event) => setQuickCategoryStyle(event.target.value as CategoryStyle)}
+                  >
+                    <option value="CARD">卡片风格</option>
+                    <option value="LIST">列表风格</option>
+                  </select>
+                  <div className="field-full modal-actions">
+                    <button type="button" className="btn-ghost" onClick={() => setQuickCategoryModalOpen(false)}>
+                      取消
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      创建分类
                     </button>
                   </div>
                 </form>
