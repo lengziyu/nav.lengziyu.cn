@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Heart, Layers, Sparkles, Trash2, Eye } from "lucide-react";
 import {
@@ -114,6 +114,7 @@ export default function AdminDashboard() {
   const [aiModels, setAiModels] = useState<string[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>("openrouter");
   const [aiModel, setAiModel] = useState("");
+  const [aiModelsLoading, setAiModelsLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
   const [autoCreateCategory, setAutoCreateCategory] = useState(true);
@@ -127,6 +128,7 @@ export default function AdminDashboard() {
   });
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
+  const aiModelsRequestIdRef = useRef(0);
 
   const stats = useMemo(() => {
     const likes = sites.reduce((sum, site) => sum + site.likes, 0);
@@ -303,19 +305,43 @@ export default function AdminDashboard() {
       return;
     }
 
+    const currentRequestId = aiModelsRequestIdRef.current + 1;
+    aiModelsRequestIdRef.current = currentRequestId;
+    setAiModelsLoading(true);
+    setAiModels([]);
     setAiModel("");
-    void fetchJson<{ models: string[]; message?: string }>(`/api/admin/ai/models?provider=${aiProvider}`)
+    setAiMessage("");
+
+    void fetchJson<{ provider?: AiProvider; models: string[]; message?: string }>(
+      `/api/admin/ai/models?provider=${aiProvider}`,
+    )
       .then((result) => {
-        setAiModels(result.models ?? []);
-        if (result.models?.[0]) {
-          setAiModel(result.models[0]);
+        if (aiModelsRequestIdRef.current !== currentRequestId) {
+          return;
         }
+
+        if (result.provider && result.provider !== aiProvider) {
+          return;
+        }
+
+        const nextModels = result.models ?? [];
+        setAiModels(nextModels);
+        setAiModel(nextModels[0] ?? "");
         if (result.message) {
           setAiMessage(result.message);
         }
       })
       .catch((error) => {
+        if (aiModelsRequestIdRef.current !== currentRequestId) {
+          return;
+        }
         setAiMessage(error instanceof Error ? error.message : "模型加载失败");
+      })
+      .finally(() => {
+        if (aiModelsRequestIdRef.current !== currentRequestId) {
+          return;
+        }
+        setAiModelsLoading(false);
       });
   }, [activeMenu, aiProvider, fetchJson]);
 
@@ -422,6 +448,10 @@ export default function AdminDashboard() {
 
   async function onAnalyzeUrl() {
     setAiMessage("");
+    if (aiModelsLoading) {
+      setAiMessage("模型列表加载中，请稍后再试");
+      return;
+    }
     if (!aiAnalyzeUrl.trim()) {
       setAiMessage("请先输入要解析的链接");
       return;
@@ -993,16 +1023,30 @@ export default function AdminDashboard() {
                       placeholder="粘贴 GitHub / 官网链接，例如 https://github.com/vercel/next.js"
                       onChange={(event) => setAiAnalyzeUrl(event.target.value)}
                     />
-                    <button type="button" className="btn-ghost" disabled={aiLoading} onClick={() => void onAnalyzeUrl()}>
-                      {aiLoading ? "分析中..." : "AI 分析"}
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      disabled={aiLoading || aiModelsLoading || !aiModel}
+                      onClick={() => void onAnalyzeUrl()}
+                    >
+                      {aiLoading ? "分析中..." : aiModelsLoading ? "加载模型..." : "AI 分析"}
                     </button>
                   </div>
                   <div className="ai-assist-meta">
-                    <select value={aiProvider} onChange={(event) => setAiProvider(event.target.value as AiProvider)}>
+                    <select
+                      value={aiProvider}
+                      onChange={(event) => {
+                        setAiProvider(event.target.value as AiProvider);
+                      }}
+                    >
                       <option value="openrouter">OpenRouter（云）</option>
                       <option value="gemini">Gemini（云）</option>
                     </select>
-                    <select value={aiModel} onChange={(event) => setAiModel(event.target.value)}>
+                    <select
+                      value={aiModel}
+                      disabled={aiModelsLoading}
+                      onChange={(event) => setAiModel(event.target.value)}
+                    >
                       <option value="">请选择模型</option>
                       {aiModels.map((model) => (
                         <option key={model} value={model}>

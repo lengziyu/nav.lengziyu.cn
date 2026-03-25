@@ -272,11 +272,20 @@ a {
 
 .site-card-body {
   min-height: 0;
-  padding: 12px 12px 12px;
+  padding: 12px 12px 10px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 4px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.98);
+  transition: transform 0.24s ease, background-color 0.24s ease, backdrop-filter 0.24s ease;
+}
+
+.site-card:hover .site-card-body {
+  transform: translateY(-68px);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
 }
 
 .site-card-main {
@@ -310,10 +319,15 @@ a {
   -webkit-line-clamp: 2;
 }
 
+.site-card:hover .site-card-main p {
+  -webkit-line-clamp: 4;
+}
+
 .site-tag-row {
-  margin-top: 10px;
+  margin-top: 14px;
+  margin-bottom: 6px;
   display: flex;
-  gap: 8px;
+  gap: 9px;
   flex-wrap: wrap;
 }
 

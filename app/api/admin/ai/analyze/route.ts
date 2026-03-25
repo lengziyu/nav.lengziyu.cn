@@ -14,14 +14,14 @@ const analyzeSchema = z.object({
   model: z.string().trim().min(1, "请选择模型"),
 });
 
-const aiResultSchema = z.object({
-  title: z.string().trim().min(2).max(120),
-  description: z.string().trim().min(8).max(320),
-  tags: z.array(z.string().trim().min(1).max(20)).max(8).default([]),
-  categoryName: z.string().trim().min(2).max(24).optional(),
-  categoryStyle: z.enum(["CARD", "LIST"]).optional(),
-  coverImageUrl: z.url().optional(),
-});
+type AiDraft = {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  categoryName?: string;
+  categoryStyle?: "CARD" | "LIST";
+  coverImageUrl?: string;
+};
 
 function stripHtml(html: string) {
   return html
@@ -167,11 +167,114 @@ function toPascalName(raw: string) {
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean)
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join("");
+    .join("")
+    .replace(/Ai/g, "AI")
+    .replace(/Llm/g, "LLM")
+    .replace(/Gpt/g, "GPT")
+    .replace(/Api/g, "API")
+    .replace(/Ui/g, "UI")
+    .replace(/Db/g, "DB");
 }
 
 function buildGeneratedCoverUrl(title: string) {
   return `/api/public/cover?title=${encodeURIComponent(title.slice(0, 28))}`;
+}
+
+function cleanSnippet(text: string, maxLength: number) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/[#>*`]/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function isValidCoverUrl(value: string) {
+  if (!value) {
+    return false;
+  }
+  if (value.startsWith("/")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeAiDraft(raw: unknown): AiDraft {
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+
+  const data = raw as Record<string, unknown>;
+  const draft: AiDraft = {};
+
+  if (typeof data.title === "string") {
+    const title = data.title.trim();
+    if (title.length >= 2) {
+      draft.title = title.slice(0, 120);
+    }
+  }
+
+  if (typeof data.description === "string") {
+    const description = cleanSnippet(data.description, 320);
+    if (description.length >= 8) {
+      draft.description = description;
+    }
+  }
+
+  if (Array.isArray(data.tags)) {
+    const tags = data.tags.filter((item): item is string => typeof item === "string");
+    draft.tags = normalizeTagList(tags);
+  } else if (typeof data.tags === "string") {
+    draft.tags = normalizeTagList(data.tags.split(/[,，/|]/g));
+  }
+
+  if (typeof data.categoryName === "string") {
+    const categoryName = data.categoryName.trim();
+    if (categoryName.length >= 2) {
+      draft.categoryName = categoryName.slice(0, 24);
+    }
+  }
+
+  if (data.categoryStyle === "CARD" || data.categoryStyle === "LIST") {
+    draft.categoryStyle = data.categoryStyle;
+  }
+
+  if (typeof data.coverImageUrl === "string") {
+    const coverImageUrl = data.coverImageUrl.trim();
+    if (isValidCoverUrl(coverImageUrl)) {
+      draft.coverImageUrl = coverImageUrl;
+    }
+  }
+
+  return draft;
+}
+
+function buildFallbackDescription(input: {
+  title: string;
+  domain: string;
+  sourceDescription: string;
+  sourceText: string;
+}) {
+  const { title, domain, sourceDescription, sourceText } = input;
+  const cleanedDescription = cleanSnippet(sourceDescription, 180);
+  if (cleanedDescription) {
+    const suffix = /[。！？.!?]$/.test(cleanedDescription) ? "" : "。";
+    return `${title}：${cleanedDescription}${suffix}可通过官网或仓库文档快速了解核心能力。`.slice(0, 320);
+  }
+
+  const contentSnippet = cleanSnippet(sourceText, 160);
+  if (contentSnippet) {
+    const suffix = /[。！？.!?]$/.test(contentSnippet) ? "" : "。";
+    return `${title}：${contentSnippet}${suffix}`.slice(0, 320);
+  }
+
+  const domainText = domain ? `来自 ${domain} 的` : "";
+  return `${title} 是${domainText}工具或开源项目，提供核心能力与使用入口，适合加入你的导航收藏。`.slice(0, 320);
 }
 
 async function generateWithProvider(provider: "openrouter" | "gemini", model: string, prompt: string) {
@@ -277,10 +380,10 @@ export async function POST(request: NextRequest) {
   const parsedUrl = new URL(url);
   const githubRepoMatch =
     parsedUrl.hostname === "github.com" ? parsedUrl.pathname.match(/^\/([^/]+)\/([^/]+)\/?$/) : null;
+  const domain = extractDomainText(url);
   const fallbackTitle = githubRepoMatch
     ? toPascalName(githubRepoMatch[2])
-    : source.sourceTitle || extractDomainText(url) || "未命名站点";
-  const fallbackDescription = `${fallbackTitle} 是一个值得关注的工具或开源项目，建议查看其功能特性与使用文档后再收藏。`;
+    : source.sourceTitle || domain || "未命名站点";
 
   try {
     const prompt = `
@@ -311,22 +414,28 @@ Description: ${source.sourceDescription}
 Cover: ${source.sourceCoverImage}
 Content:
 ${source.sourceText}
-`.trim();
+    `.trim();
 
     const llmText = await generateWithProvider(provider, model, prompt);
     const aiRaw = parseAiJson(llmText);
-    const aiParsed = aiResultSchema.safeParse(aiRaw);
+    const aiDraft = normalizeAiDraft(aiRaw);
 
-    const normalizedTags = normalizeTagList(aiParsed.success ? aiParsed.data.tags : []);
-    const aiTitle = aiParsed.success ? aiParsed.data.title : fallbackTitle;
+    const normalizedTags = normalizeTagList(aiDraft.tags ?? []);
+    const aiTitle = aiDraft.title || fallbackTitle;
     const safeTitle = (githubRepoMatch ? toPascalName(githubRepoMatch[2]) : aiTitle).slice(0, 120);
-    const safeDescription = (aiParsed.success ? aiParsed.data.description : fallbackDescription).slice(0, 320);
-    const suggestedCategoryName = aiParsed.success ? aiParsed.data.categoryName?.trim() ?? "" : "";
+    const safeDescription = (aiDraft.description ||
+      buildFallbackDescription({
+        title: safeTitle,
+        domain,
+        sourceDescription: source.sourceDescription,
+        sourceText: source.sourceText,
+      })).slice(0, 320);
+    const suggestedCategoryName = aiDraft.categoryName?.trim() ?? "";
     const matchedCategoryId = suggestedCategoryName
       ? findCategoryIdByName(categories, suggestedCategoryName)
       : "";
     const finalCoverImage =
-      (aiParsed.success ? aiParsed.data.coverImageUrl : "") ||
+      (aiDraft.coverImageUrl || "") ||
       source.sourceCoverImage ||
       buildGeneratedCoverUrl(safeTitle);
 
@@ -337,7 +446,7 @@ ${source.sourceText}
         tags: normalizedTags,
         coverImageUrl: finalCoverImage,
         categoryName: suggestedCategoryName,
-        categoryStyle: aiParsed.success ? aiParsed.data.categoryStyle || "CARD" : "CARD",
+        categoryStyle: aiDraft.categoryStyle || "CARD",
         matchedCategoryId,
       },
     });
@@ -347,7 +456,12 @@ ${source.sourceText}
         message: error instanceof Error ? error.message : "AI 分析失败",
         data: {
           title: fallbackTitle.slice(0, 120),
-          description: fallbackDescription.slice(0, 320),
+          description: buildFallbackDescription({
+            title: fallbackTitle,
+            domain,
+            sourceDescription: source.sourceDescription,
+            sourceText: source.sourceText,
+          }).slice(0, 320),
           tags: [],
           coverImageUrl: source.sourceCoverImage || buildGeneratedCoverUrl(fallbackTitle),
           categoryName: "",
