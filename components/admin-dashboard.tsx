@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ClipboardList, Heart, Layers, Sparkles, Trash2, Eye } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -94,13 +95,16 @@ export default function AdminDashboard() {
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
   const [categoryStyle, setCategoryStyle] = useState<CategoryStyle>("CARD");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
   const [siteTitle, setSiteTitle] = useState("");
   const [siteDescription, setSiteDescription] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
   const [siteCoverImage, setSiteCoverImage] = useState("");
   const [siteCategoryId, setSiteCategoryId] = useState("");
-  const [siteTags, setSiteTags] = useState("");
+  const [siteTags, setSiteTags] = useState<string[]>([]);
+  const [siteTagInput, setSiteTagInput] = useState("");
   const [editingSiteId, setEditingSiteId] = useState("");
   const [siteModalOpen, setSiteModalOpen] = useState(false);
   const [siteModalMode, setSiteModalMode] = useState<"create" | "edit">("create");
@@ -115,10 +119,12 @@ export default function AdminDashboard() {
   const [autoCreateCategory, setAutoCreateCategory] = useState(true);
   const [suggestedCategoryName, setSuggestedCategoryName] = useState("");
   const [suggestedCategoryStyle, setSuggestedCategoryStyle] = useState<CategoryStyle>("CARD");
-  const [quickCategoryModalOpen, setQuickCategoryModalOpen] = useState(false);
-  const [quickCategoryName, setQuickCategoryName] = useState("");
-  const [quickCategoryDescription, setQuickCategoryDescription] = useState("");
-  const [quickCategoryStyle, setQuickCategoryStyle] = useState<CategoryStyle>("CARD");
+  const [displayStats, setDisplayStats] = useState({
+    totalSites: 0,
+    pendingSubmissions: 0,
+    likes: 0,
+    views: 0,
+  });
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
 
@@ -133,6 +139,34 @@ export default function AdminDashboard() {
       views,
     };
   }, [sites, submissions]);
+
+  useEffect(() => {
+    const from = { totalSites: 0, pendingSubmissions: 0, likes: 0, views: 0 };
+    const to = stats;
+    const duration = 2000;
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayStats({
+        totalSites: Math.round(from.totalSites + (to.totalSites - from.totalSites) * eased),
+        pendingSubmissions: Math.round(
+          from.pendingSubmissions + (to.pendingSubmissions - from.pendingSubmissions) * eased,
+        ),
+        likes: Math.round(from.likes + (to.likes - from.likes) * eased),
+        views: Math.round(from.views + (to.views - from.views) * eased),
+      });
+
+      if (progress < 1) {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [stats]);
 
   const categoryMetrics = useMemo(() => {
     return categories.map((category) => {
@@ -159,6 +193,17 @@ export default function AdminDashboard() {
         likes: site.likes,
       }));
   }, [sites]);
+
+  function normalizeUrlInput(value: string) {
+    const text = value.trim();
+    if (!text) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(text)) {
+      return text;
+    }
+    return `https://${text}`;
+  }
 
   const filteredPublishSites = useMemo(() => {
     if (publishCategoryFilter === "all") {
@@ -250,6 +295,10 @@ export default function AdminDashboard() {
   }, [publishPage, publishTotalPages]);
 
   useEffect(() => {
+    setSelectedCategoryIds((prev) => prev.filter((id) => categories.some((item) => item.id === id)));
+  }, [categories]);
+
+  useEffect(() => {
     if (activeMenu !== "publish") {
       return;
     }
@@ -270,6 +319,14 @@ export default function AdminDashboard() {
       });
   }, [activeMenu, aiProvider, fetchJson]);
 
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+    const timer = window.setTimeout(() => setMessage(""), 2800);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   async function onCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -287,6 +344,7 @@ export default function AdminDashboard() {
       setCategoryName("");
       setCategoryDescription("");
       setCategoryStyle("CARD");
+      setCategoryModalOpen(false);
       setMessage("分类创建成功");
       await refreshData();
     } catch (error) {
@@ -301,12 +359,35 @@ export default function AdminDashboard() {
       .filter(Boolean);
   }
 
+  function addTagFromInput() {
+    const tags = parseTagInput(siteTagInput);
+    if (tags.length === 0) {
+      return;
+    }
+
+    setSiteTags((prev) => {
+      const merged = [...prev];
+      for (const tag of tags) {
+        if (!merged.includes(tag)) {
+          merged.push(tag);
+        }
+      }
+      return merged.slice(0, 8);
+    });
+    setSiteTagInput("");
+  }
+
+  function removeTag(tag: string) {
+    setSiteTags((prev) => prev.filter((item) => item !== tag));
+  }
+
   function resetSiteForm() {
     setSiteTitle("");
     setSiteDescription("");
     setSiteUrl("");
     setSiteCoverImage("");
-    setSiteTags("");
+    setSiteTags([]);
+    setSiteTagInput("");
     setEditingSiteId("");
     setAiAnalyzeUrl("");
     setAiMessage("");
@@ -334,7 +415,7 @@ export default function AdminDashboard() {
     setSiteUrl(site.url);
     setSiteCoverImage(site.coverImageUrl ?? "");
     setSiteCategoryId(site.category.id);
-    setSiteTags(site.tags.map((tag) => tag.name).join(", "));
+    setSiteTags(site.tags.map((tag) => tag.name));
     setSiteModalOpen(true);
     setMessage("");
   }
@@ -349,6 +430,8 @@ export default function AdminDashboard() {
       setAiMessage("请先选择模型");
       return;
     }
+
+    const safeAnalyzeUrl = normalizeUrlInput(aiAnalyzeUrl);
 
     setAiLoading(true);
     try {
@@ -366,7 +449,7 @@ export default function AdminDashboard() {
       }>("/api/admin/ai/analyze", {
         method: "POST",
         body: JSON.stringify({
-          url: aiAnalyzeUrl.trim(),
+          url: safeAnalyzeUrl,
           provider: aiProvider,
           model: aiModel,
         }),
@@ -380,11 +463,12 @@ export default function AdminDashboard() {
 
       setSiteTitle(data.title || "");
       setSiteDescription(data.description || "");
-      setSiteUrl(aiAnalyzeUrl.trim());
+      setAiAnalyzeUrl(safeAnalyzeUrl);
+      setSiteUrl(safeAnalyzeUrl);
       if (data.coverImageUrl) {
         setSiteCoverImage(data.coverImageUrl);
       }
-      setSiteTags((data.tags ?? []).join(", "));
+      setSiteTags(data.tags ?? []);
       setSuggestedCategoryName(data.categoryName || "");
       setSuggestedCategoryStyle(data.categoryStyle || "CARD");
 
@@ -428,28 +512,43 @@ export default function AdminDashboard() {
     return created.category.id;
   }
 
-  async function onCreateCategoryQuick(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function canDeleteCategory(category: AdminCategory) {
+    return (category._count?.sites ?? 0) === 0 && (category._count?.submissions ?? 0) === 0;
+  }
+
+  async function onDeleteCategory(id: string) {
     setMessage("");
-
     try {
-      await fetchJson<{ category: AdminCategory }>("/api/admin/categories", {
-        method: "POST",
-        body: JSON.stringify({
-          name: quickCategoryName,
-          description: quickCategoryDescription,
-          style: quickCategoryStyle,
-        }),
+      await fetchJson<{ ok: boolean }>(`/api/admin/categories/${id}`, {
+        method: "DELETE",
       });
-
-      setQuickCategoryName("");
-      setQuickCategoryDescription("");
-      setQuickCategoryStyle("CARD");
-      setQuickCategoryModalOpen(false);
-      setMessage("分类创建成功");
+      setSelectedCategoryIds((prev) => prev.filter((item) => item !== id));
+      setMessage("分类已删除");
       await refreshData();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "分类创建失败");
+      setMessage(error instanceof Error ? error.message : "删除失败");
+    }
+  }
+
+  async function onBatchDeleteCategories() {
+    setMessage("");
+    if (selectedCategoryIds.length === 0) {
+      setMessage("请先勾选要删除的分类");
+      return;
+    }
+
+    try {
+      await fetchJson<{ ok: boolean; deletedCount: number }>("/api/admin/categories/batch-delete", {
+        method: "POST",
+        body: JSON.stringify({
+          ids: selectedCategoryIds,
+        }),
+      });
+      setSelectedCategoryIds([]);
+      setMessage("批量删除成功");
+      await refreshData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "批量删除失败");
     }
   }
 
@@ -458,6 +557,8 @@ export default function AdminDashboard() {
     setMessage("");
 
     try {
+      const safeUrl = normalizeUrlInput(siteUrl);
+      setSiteUrl(safeUrl);
       const resolvedCategoryId = await ensureSiteCategoryId();
 
       await fetchJson<{ site: AdminSite }>("/api/admin/sites", {
@@ -465,10 +566,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           title: siteTitle,
           description: siteDescription,
-          url: siteUrl,
+          url: safeUrl,
           coverImageUrl: siteCoverImage || undefined,
           categoryId: resolvedCategoryId,
-          tags: parseTagInput(siteTags),
+          tags: siteTags,
         }),
       });
 
@@ -491,6 +592,8 @@ export default function AdminDashboard() {
     }
 
     try {
+      const safeUrl = normalizeUrlInput(siteUrl);
+      setSiteUrl(safeUrl);
       const resolvedCategoryId = await ensureSiteCategoryId();
 
       await fetchJson<{ site: AdminSite }>(`/api/admin/sites/${editingSiteId}`, {
@@ -498,10 +601,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           title: siteTitle,
           description: siteDescription,
-          url: siteUrl,
+          url: safeUrl,
           coverImageUrl: siteCoverImage || undefined,
           categoryId: resolvedCategoryId,
-          tags: parseTagInput(siteTags),
+          tags: siteTags,
         }),
       });
 
@@ -540,6 +643,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-shell">
+      {message ? <div className="admin-toast">{message}</div> : null}
       <header className="admin-topbar">
         <div className="admin-topbar-left">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -577,26 +681,29 @@ export default function AdminDashboard() {
         </aside>
 
         <main className="admin-main">
-          {message ? <div className="admin-message">{message}</div> : null}
           {loading ? <div className="admin-loading">加载中...</div> : null}
 
           {activeMenu === "overview" ? (
             <section className="admin-panel-group">
               <div className="admin-stat-grid">
-                <div className="admin-stat-card">
-                  <strong>{stats.totalSites}</strong>
+                <div className="admin-stat-card stat-tone-1">
+                  <i><Layers size={16} /></i>
+                  <strong>{displayStats.totalSites}</strong>
                   <small>已发布站点</small>
                 </div>
-                <div className="admin-stat-card">
-                  <strong>{stats.pendingSubmissions}</strong>
+                <div className="admin-stat-card stat-tone-2">
+                  <i><ClipboardList size={16} /></i>
+                  <strong>{displayStats.pendingSubmissions}</strong>
                   <small>待审核投稿</small>
                 </div>
-                <div className="admin-stat-card">
-                  <strong>{stats.likes}</strong>
+                <div className="admin-stat-card stat-tone-3">
+                  <i><Heart size={16} /></i>
+                  <strong>{displayStats.likes}</strong>
                   <small>总点赞</small>
                 </div>
-                <div className="admin-stat-card">
-                  <strong>{stats.views}</strong>
+                <div className="admin-stat-card stat-tone-4">
+                  <i><Eye size={16} /></i>
+                  <strong>{displayStats.views}</strong>
                   <small>总浏览</small>
                 </div>
               </div>
@@ -654,19 +761,6 @@ export default function AdminDashboard() {
                         />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className="admin-chart-legend">
-                      {categoryMetrics.map((item, index) => (
-                        <div key={item.name}>
-                          <i
-                            style={{
-                              backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-                            }}
-                          />
-                          <span>{item.name}</span>
-                          <b>{item.count}</b>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </section>
               </div>
@@ -693,64 +787,69 @@ export default function AdminDashboard() {
                 </div>
               </section>
 
-              <section className="admin-card full-width">
-                <h2>最近发布</h2>
-                <div className="site-table">
-                  {sites.slice(0, 20).map((site) => (
-                    <div key={site.id} className="site-table-row">
-                      <strong>{site.title}</strong>
-                      <span>{site.category.name}</span>
-                      <span>{site.publisherName}</span>
-                      <span>❤ {site.likes}</span>
-                      <span>👁 {site.views}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
             </section>
           ) : null}
 
           {activeMenu === "categories" ? (
             <section className="admin-panel-group">
-              <section className="admin-card">
-                <h2>新增分类</h2>
-                <form className="admin-form admin-form-grid" onSubmit={onCreateCategory}>
-                  <input
-                    className="field-half"
-                    required
-                    value={categoryName}
-                    placeholder="分类名，例如 AI 工具"
-                    onChange={(event) => setCategoryName(event.target.value)}
-                  />
-                  <input
-                    className="field-half"
-                    value={categoryDescription}
-                    placeholder="分类说明（可选）"
-                    onChange={(event) => setCategoryDescription(event.target.value)}
-                  />
-                  <select
-                    className="field-third"
-                    value={categoryStyle}
-                    onChange={(event) => setCategoryStyle(event.target.value as CategoryStyle)}
-                  >
-                    <option value="CARD">卡片风格</option>
-                    <option value="LIST">列表风格</option>
-                  </select>
-                  <button className="field-third" type="submit">
-                    创建分类
-                  </button>
-                </form>
-              </section>
-
               <section className="admin-card full-width">
-                <h2>分类列表</h2>
+                <div className="admin-site-toolbar">
+                  <h2>分类列表</h2>
+                  <div className="admin-site-toolbar-actions">
+                    <button type="button" className="btn-primary" onClick={() => setCategoryModalOpen(true)}>
+                      新增分类
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() =>
+                        setSelectedCategoryIds((prev) => {
+                          const deletable = categories.filter(canDeleteCategory).map((item) => item.id);
+                          if (prev.length === deletable.length) {
+                            return [];
+                          }
+                          return deletable;
+                        })
+                      }
+                    >
+                      {selectedCategoryIds.length > 0 ? "取消全选" : "全选可删"}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => void onBatchDeleteCategories()}>
+                      批量删除
+                    </button>
+                  </div>
+                </div>
                 <div className="category-list">
                   {categories.map((category) => (
                     <div key={category.id} className="category-row">
+                      <label className="category-check">
+                        <input
+                          type="checkbox"
+                          checked={selectedCategoryIds.includes(category.id)}
+                          disabled={!canDeleteCategory(category)}
+                          onChange={(event) => {
+                            setSelectedCategoryIds((prev) => {
+                              if (event.target.checked) {
+                                return [...prev, category.id];
+                              }
+                              return prev.filter((item) => item !== category.id);
+                            });
+                          }}
+                        />
+                      </label>
                       <strong>{category.name}</strong>
                       <span>{category.description || "-"}</span>
                       <small>{category.style === "CARD" ? "卡片" : "列表"}</small>
-                      <small>站点 {category._count?.sites ?? 0}</small>
+                      <small>站点 {category._count?.sites ?? 0} / 投稿 {category._count?.submissions ?? 0}</small>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={!canDeleteCategory(category)}
+                        onClick={() => void onDeleteCategory(category.id)}
+                      >
+                        <Trash2 size={14} />
+                        删除
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -778,7 +877,7 @@ export default function AdminDashboard() {
                     <button type="button" className="btn-primary" onClick={onOpenCreateSiteModal}>
                       新增站点
                     </button>
-                    <button type="button" className="btn-ghost" onClick={() => setQuickCategoryModalOpen(true)}>
+                    <button type="button" className="btn-ghost" onClick={() => setCategoryModalOpen(true)}>
                       新增分类
                     </button>
                   </div>
@@ -887,17 +986,22 @@ export default function AdminDashboard() {
                 <p>填写站点信息后保存，支持分类和标签。</p>
 
                 <div className="ai-assist-panel">
-                  <strong>AI 链接解析</strong>
+                  <strong><Sparkles size={14} /> AI 链接解析</strong>
                   <div className="ai-assist-row">
-                    <select value={aiProvider} onChange={(event) => setAiProvider(event.target.value as AiProvider)}>
-                      <option value="openrouter">OpenRouter（云）</option>
-                      <option value="gemini">Gemini（云）</option>
-                    </select>
                     <input
                       value={aiAnalyzeUrl}
                       placeholder="粘贴 GitHub / 官网链接，例如 https://github.com/vercel/next.js"
                       onChange={(event) => setAiAnalyzeUrl(event.target.value)}
                     />
+                    <button type="button" className="btn-ghost" disabled={aiLoading} onClick={() => void onAnalyzeUrl()}>
+                      {aiLoading ? "分析中..." : "AI 分析"}
+                    </button>
+                  </div>
+                  <div className="ai-assist-meta">
+                    <select value={aiProvider} onChange={(event) => setAiProvider(event.target.value as AiProvider)}>
+                      <option value="openrouter">OpenRouter（云）</option>
+                      <option value="gemini">Gemini（云）</option>
+                    </select>
                     <select value={aiModel} onChange={(event) => setAiModel(event.target.value)}>
                       <option value="">请选择模型</option>
                       {aiModels.map((model) => (
@@ -906,9 +1010,6 @@ export default function AdminDashboard() {
                         </option>
                       ))}
                     </select>
-                    <button type="button" className="btn-ghost" disabled={aiLoading} onClick={() => void onAnalyzeUrl()}>
-                      {aiLoading ? "分析中..." : "AI 分析"}
-                    </button>
                   </div>
                   {suggestedCategoryName ? (
                     <label className="ai-assist-check">
@@ -964,12 +1065,30 @@ export default function AdminDashboard() {
                       </option>
                     ))}
                   </select>
-                  <input
-                    className="field-third"
-                    value={siteTags}
-                    placeholder="标签，逗号分隔"
-                    onChange={(event) => setSiteTags(event.target.value)}
-                  />
+                  <div className="field-full admin-tag-editor">
+                    <div className="admin-tag-list">
+                      {siteTags.map((tag) => (
+                        <span key={tag} className="admin-tag-chip">
+                          {tag}
+                          <button type="button" onClick={() => removeTag(tag)}>
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <input
+                      value={siteTagInput}
+                      placeholder="输入标签后按回车添加"
+                      onChange={(event) => setSiteTagInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addTagFromInput();
+                        }
+                      }}
+                      onBlur={addTagFromInput}
+                    />
+                  </div>
 
                   <div className="field-full modal-actions">
                     <button type="button" className="btn-ghost" onClick={onCloseSiteModal}>
@@ -984,35 +1103,35 @@ export default function AdminDashboard() {
             </div>
           ) : null}
 
-          {quickCategoryModalOpen ? (
-            <div className="modal-mask" onClick={() => setQuickCategoryModalOpen(false)}>
+          {categoryModalOpen ? (
+            <div className="modal-mask" onClick={() => setCategoryModalOpen(false)}>
               <div className="modal-panel" onClick={(event) => event.stopPropagation()}>
                 <h3>新增分类</h3>
                 <p>创建后可直接用于站点新增与 AI 自动归类。</p>
-                <form className="admin-form admin-form-grid" onSubmit={onCreateCategoryQuick}>
+                <form className="admin-form admin-form-grid" onSubmit={onCreateCategory}>
                   <input
                     className="field-half"
                     required
-                    value={quickCategoryName}
+                    value={categoryName}
                     placeholder="分类名，例如 AI 工作流"
-                    onChange={(event) => setQuickCategoryName(event.target.value)}
+                    onChange={(event) => setCategoryName(event.target.value)}
                   />
                   <input
                     className="field-half"
-                    value={quickCategoryDescription}
+                    value={categoryDescription}
                     placeholder="分类说明（可选）"
-                    onChange={(event) => setQuickCategoryDescription(event.target.value)}
+                    onChange={(event) => setCategoryDescription(event.target.value)}
                   />
                   <select
                     className="field-third"
-                    value={quickCategoryStyle}
-                    onChange={(event) => setQuickCategoryStyle(event.target.value as CategoryStyle)}
+                    value={categoryStyle}
+                    onChange={(event) => setCategoryStyle(event.target.value as CategoryStyle)}
                   >
                     <option value="CARD">卡片风格</option>
                     <option value="LIST">列表风格</option>
                   </select>
                   <div className="field-full modal-actions">
-                    <button type="button" className="btn-ghost" onClick={() => setQuickCategoryModalOpen(false)}>
+                    <button type="button" className="btn-ghost" onClick={() => setCategoryModalOpen(false)}>
                       取消
                     </button>
                     <button type="submit" className="btn-primary">
