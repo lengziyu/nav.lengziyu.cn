@@ -19,6 +19,7 @@ import {
 type CategoryStyle = "CARD" | "LIST";
 type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminMenuKey = "overview" | "categories" | "publish" | "review";
+type AiProvider = "ollama" | "openrouter" | "gemini";
 
 type AdminCategory = {
   id: string;
@@ -107,6 +108,7 @@ export default function AdminDashboard() {
   const [publishPage, setPublishPage] = useState(1);
   const [aiAnalyzeUrl, setAiAnalyzeUrl] = useState("");
   const [aiModels, setAiModels] = useState<string[]>([]);
+  const [aiProvider, setAiProvider] = useState<AiProvider>("ollama");
   const [aiModel, setAiModel] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
@@ -248,14 +250,15 @@ export default function AdminDashboard() {
   }, [publishPage, publishTotalPages]);
 
   useEffect(() => {
-    if (activeMenu !== "publish" || aiModels.length > 0) {
+    if (activeMenu !== "publish") {
       return;
     }
 
-    void fetchJson<{ models: string[]; message?: string }>("/api/admin/ai/models")
+    setAiModel("");
+    void fetchJson<{ models: string[]; message?: string }>(`/api/admin/ai/models?provider=${aiProvider}`)
       .then((result) => {
         setAiModels(result.models ?? []);
-        if (!aiModel && result.models?.[0]) {
+        if (result.models?.[0]) {
           setAiModel(result.models[0]);
         }
         if (result.message) {
@@ -265,7 +268,7 @@ export default function AdminDashboard() {
       .catch((error) => {
         setAiMessage(error instanceof Error ? error.message : "模型加载失败");
       });
-  }, [activeMenu, aiModel, aiModels.length, fetchJson]);
+  }, [activeMenu, aiProvider, fetchJson]);
 
   async function onCreateCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -364,6 +367,7 @@ export default function AdminDashboard() {
         method: "POST",
         body: JSON.stringify({
           url: aiAnalyzeUrl.trim(),
+          provider: aiProvider,
           model: aiModel,
         }),
       });
@@ -885,6 +889,11 @@ export default function AdminDashboard() {
                 <div className="ai-assist-panel">
                   <strong>AI 链接解析</strong>
                   <div className="ai-assist-row">
+                    <select value={aiProvider} onChange={(event) => setAiProvider(event.target.value as AiProvider)}>
+                      <option value="ollama">Ollama（本地）</option>
+                      <option value="openrouter">OpenRouter（云）</option>
+                      <option value="gemini">Gemini（云）</option>
+                    </select>
                     <input
                       value={aiAnalyzeUrl}
                       placeholder="粘贴 GitHub / 官网链接，例如 https://github.com/vercel/next.js"

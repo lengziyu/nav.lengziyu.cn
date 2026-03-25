@@ -1010,7 +1010,7 @@ a {
 .ai-assist-row {
   margin-top: 8px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px auto;
+  grid-template-columns: 170px minmax(0, 1fr) 210px auto;
   gap: 8px;
 }
 

@@ -6,9 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { normalizeTagList } from "@/lib/utils";
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
 
 const analyzeSchema = z.object({
   url: z.url({ message: "请输入正确链接" }),
+  provider: z.enum(["ollama", "openrouter", "gemini"]).default("ollama"),
   model: z.string().trim().min(1, "请选择模型"),
 });
 
@@ -159,6 +162,111 @@ function parseAiJson(text: string) {
   }
 }
 
+async function generateWithProvider(provider: "ollama" | "openrouter" | "gemini", model: string, prompt: string) {
+  if (provider === "ollama") {
+    const ollamaResponse = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        format: "json",
+        options: {
+          temperature: 0.2,
+        },
+      }),
+    });
+
+    if (!ollamaResponse.ok) {
+      throw new Error("调用 Ollama 失败");
+    }
+
+    const ollamaResult = (await ollamaResponse.json()) as {
+      response?: string;
+    };
+
+    return ollamaResult.response ?? "";
+  }
+
+  if (provider === "openrouter") {
+    if (!OPENROUTER_API_KEY) {
+      throw new Error("未配置 OPENROUTER_API_KEY");
+    }
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("调用 OpenRouter 失败");
+    }
+
+    const result = (await response.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
+    };
+
+    return result.choices?.[0]?.message?.content ?? "";
+  }
+
+  if (!GEMINI_API_KEY) {
+    throw new Error("未配置 GEMINI_API_KEY");
+  }
+
+  const geminiModel = model.startsWith("models/") ? model : `models/${model}`;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${geminiModel}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("调用 Gemini 失败");
+  }
+
+  const result = (await response.json()) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
+    }>;
+  };
+
+  return (result.candidates?.[0]?.content?.parts ?? []).map((item) => item.text || "").join("\n");
+}
+
 export async function POST(request: NextRequest) {
   if (!isAdminRequest(request)) {
     return NextResponse.json({ message: "未登录" }, { status: 401 });
@@ -171,7 +279,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: parsed.error.issues[0]?.message ?? "参数错误" }, { status: 400 });
   }
 
-  const { url, model } = parsed.data;
+  const { url, model, provider } = parsed.data;
   const categories = await prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: {
@@ -215,30 +323,8 @@ Content:
 ${source.sourceText}
 `.trim();
 
-    const ollamaResponse = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        format: "json",
-        options: {
-          temperature: 0.2,
-        },
-      }),
-    });
-
-    if (!ollamaResponse.ok) {
-      throw new Error("调用 Ollama 失败");
-    }
-
-    const ollamaResult = (await ollamaResponse.json()) as {
-      response?: string;
-    };
-    const aiRaw = parseAiJson(ollamaResult.response ?? "");
+    const llmText = await generateWithProvider(provider, model, prompt);
+    const aiRaw = parseAiJson(llmText);
     const aiParsed = aiResultSchema.safeParse(aiRaw);
 
     const normalizedTags = normalizeTagList(aiParsed.success ? aiParsed.data.tags : []);
