@@ -369,10 +369,9 @@ a {
   gap: 9px;
   flex-wrap: wrap;
   align-content: flex-start;
-  min-height: 56px;
-  max-height: 56px;
+  min-height: 28px;
+  max-height: 28px;
   overflow: hidden;
-  transition: max-height 0.24s ease;
 }
 
 .site-tag-row span {

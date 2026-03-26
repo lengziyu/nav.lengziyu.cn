@@ -435,12 +435,7 @@ function SiteCard({
       const descriptionOverflow = descriptionRef.current
         ? descriptionRef.current.scrollHeight - descriptionRef.current.clientHeight > 1
         : false;
-
-      const tagsOverflow = tagRowRef.current
-        ? tagRowRef.current.scrollHeight - tagRowRef.current.clientHeight > 1
-        : false;
-
-      setLiftOnHover(descriptionOverflow || tagsOverflow);
+      setLiftOnHover(descriptionOverflow);
     };
 
     const run = () => window.requestAnimationFrame(updateLiftState);
