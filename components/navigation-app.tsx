@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
@@ -308,52 +308,12 @@ export default function NavigationApp() {
           ) : (
             <div className="site-card-grid">
               {activeCategory?.sites.map((site) => (
-                <article key={site.id} className="site-card" onClick={() => void onOpenSite(site)}>
-                  <div className="site-card-cover" style={{ background: site.fallbackColor }}>
-                    {site.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={site.coverImageUrl} alt={site.title} />
-                    ) : (
-                      <span>{site.title}</span>
-                    )}
-                  </div>
-
-                  <div className="site-card-body">
-                    <div className="site-card-main">
-                      <h3>{site.title}</h3>
-                      <p>{site.description}</p>
-                      <div className="site-tag-row">
-                        {site.tags.slice(0, 3).map((tag) => (
-                          <span key={tag.id} className={`tag-chip ${getTagToneClass(tag.name)}`}>
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="site-card-footer" onClick={(event) => event.stopPropagation()}>
-                      <div className="site-meta-row">
-                        <strong>{site.publisherName}</strong>
-                      </div>
-
-                      <div className="site-metric-row">
-                        <button
-                          type="button"
-                          className="site-metric-pill button"
-                          aria-label={`点赞 ${site.title}`}
-                          onClick={() => void onLike(site.id)}
-                        >
-                          <Heart size={14} />
-                          <span>{site.likes}</span>
-                        </button>
-                        <span className="site-metric-pill">
-                          <Eye size={14} />
-                          <span>{site.views}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </article>
+                <SiteCard
+                  key={site.id}
+                  site={site}
+                  onOpenSite={onOpenSite}
+                  onLike={onLike}
+                />
               ))}
               {activeCategory?.sites.length === 0 ? <EmptyState /> : null}
             </div>
@@ -455,4 +415,106 @@ function CardSkeleton() {
 
 function EmptyState() {
   return <div className="empty-box">当前分类还没有站点，先去推荐一个吧。</div>;
+}
+
+function SiteCard({
+  site,
+  onOpenSite,
+  onLike,
+}: {
+  site: PublicSite;
+  onOpenSite: (site: PublicSite) => Promise<void>;
+  onLike: (siteId: string) => Promise<void>;
+}) {
+  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const tagRowRef = useRef<HTMLDivElement | null>(null);
+  const [liftOnHover, setLiftOnHover] = useState(false);
+
+  useEffect(() => {
+    const updateLiftState = () => {
+      const descriptionOverflow = descriptionRef.current
+        ? descriptionRef.current.scrollHeight - descriptionRef.current.clientHeight > 1
+        : false;
+
+      const tagsOverflow = tagRowRef.current
+        ? tagRowRef.current.scrollHeight - tagRowRef.current.clientHeight > 1
+        : false;
+
+      setLiftOnHover(descriptionOverflow || tagsOverflow);
+    };
+
+    const run = () => window.requestAnimationFrame(updateLiftState);
+    run();
+
+    const onResize = () => run();
+    window.addEventListener("resize", onResize);
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => run());
+      if (descriptionRef.current) {
+        observer.observe(descriptionRef.current);
+      }
+      if (tagRowRef.current) {
+        observer.observe(tagRowRef.current);
+      }
+    }
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      observer?.disconnect();
+    };
+  }, [site.description, site.tags]);
+
+  return (
+    <article
+      className={`site-card ${liftOnHover ? "can-lift" : ""}`}
+      onClick={() => void onOpenSite(site)}
+    >
+      <div className="site-card-cover" style={{ background: site.fallbackColor }}>
+        {site.coverImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={site.coverImageUrl} alt={site.title} />
+        ) : (
+          <span>{site.title}</span>
+        )}
+      </div>
+
+      <div className="site-card-body">
+        <div className="site-card-main">
+          <h3>{site.title}</h3>
+          <p ref={descriptionRef}>{site.description}</p>
+          <div className="site-tag-row" ref={tagRowRef}>
+            {site.tags.slice(0, 3).map((tag) => (
+              <span key={tag.id} className={`tag-chip ${getTagToneClass(tag.name)}`}>
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="site-card-footer" onClick={(event) => event.stopPropagation()}>
+          <div className="site-meta-row">
+            <strong>{site.publisherName}</strong>
+          </div>
+
+          <div className="site-metric-row">
+            <button
+              type="button"
+              className="site-metric-pill button"
+              aria-label={`点赞 ${site.title}`}
+              onClick={() => void onLike(site.id)}
+            >
+              <Heart size={14} />
+              <span>{site.likes}</span>
+            </button>
+            <span className="site-metric-pill">
+              <Eye size={14} />
+              <span>{site.views}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 }

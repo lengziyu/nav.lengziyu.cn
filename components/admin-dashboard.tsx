@@ -718,23 +718,31 @@ export default function AdminDashboard() {
               <div className="admin-stat-grid">
                 <div className="admin-stat-card stat-tone-1">
                   <i><Layers size={16} /></i>
-                  <strong>{displayStats.totalSites}</strong>
-                  <small>已发布站点</small>
+                  <div className="admin-stat-content">
+                    <strong>{displayStats.totalSites}</strong>
+                    <small>已发布站点</small>
+                  </div>
                 </div>
                 <div className="admin-stat-card stat-tone-2">
                   <i><ClipboardList size={16} /></i>
-                  <strong>{displayStats.pendingSubmissions}</strong>
-                  <small>待审核投稿</small>
+                  <div className="admin-stat-content">
+                    <strong>{displayStats.pendingSubmissions}</strong>
+                    <small>待审核投稿</small>
+                  </div>
                 </div>
                 <div className="admin-stat-card stat-tone-3">
                   <i><Heart size={16} /></i>
-                  <strong>{displayStats.likes}</strong>
-                  <small>总点赞</small>
+                  <div className="admin-stat-content">
+                    <strong>{displayStats.likes}</strong>
+                    <small>总点赞</small>
+                  </div>
                 </div>
                 <div className="admin-stat-card stat-tone-4">
                   <i><Eye size={16} /></i>
-                  <strong>{displayStats.views}</strong>
-                  <small>总浏览</small>
+                  <div className="admin-stat-content">
+                    <strong>{displayStats.views}</strong>
+                    <small>总浏览</small>
+                  </div>
                 </div>
               </div>
 
@@ -873,7 +881,7 @@ export default function AdminDashboard() {
                       <small>站点 {category._count?.sites ?? 0} / 投稿 {category._count?.submissions ?? 0}</small>
                       <button
                         type="button"
-                        className="btn-ghost"
+                        className="btn-ghost category-delete-btn"
                         disabled={!canDeleteCategory(category)}
                         onClick={() => void onDeleteCategory(category.id)}
                       >

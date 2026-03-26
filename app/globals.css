@@ -316,11 +316,12 @@ a {
   justify-content: flex-start;
   gap: 4px;
   position: relative;
+  z-index: 2;
   background: rgba(255, 255, 255, 0.98);
   transition: transform 0.24s ease, background-color 0.24s ease, backdrop-filter 0.24s ease;
 }
 
-.site-card:hover .site-card-body {
+.site-card.can-lift:hover .site-card-body {
   transform: translateY(-14px);
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(2px);
@@ -357,7 +358,7 @@ a {
   -webkit-line-clamp: 2;
 }
 
-.site-card:hover .site-card-main p {
+.site-card.can-lift:hover .site-card-main p {
   -webkit-line-clamp: 3;
 }
 
@@ -373,7 +374,7 @@ a {
   transition: max-height 0.24s ease;
 }
 
-.site-card:hover .site-tag-row {
+.site-card.can-lift:hover .site-tag-row {
   max-height: 60px;
 }
 
@@ -908,26 +909,47 @@ a {
   padding: 12px;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+}
+
+.admin-stat-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 46px;
 }
 
 .admin-stat-card strong {
   display: block;
-  font-size: 24px;
+  font-size: 27px;
+  line-height: 1.1;
   font-family: var(--font-display), sans-serif;
 }
 
 .admin-stat-card small {
+  display: block;
   color: var(--text-sub);
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .admin-stat-card i {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.admin-stat-card i svg {
+  width: 20px;
+  height: 20px;
 }
 
 .stat-tone-1 {
@@ -1092,7 +1114,13 @@ a {
 }
 
 .category-row {
-  grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  grid-template-columns:
+    36px
+    minmax(0, 1.5fr)
+    minmax(0, 2fr)
+    minmax(0, 1fr)
+    minmax(0, 1.4fr)
+    minmax(118px, 138px);
 }
 
 .category-check {
@@ -1113,6 +1141,32 @@ a {
 .site-table-row-edit .btn-ghost {
   justify-self: end;
   padding: 6px 12px;
+}
+
+.category-delete-btn {
+  justify-self: end;
+  min-width: 108px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid #d92d20;
+  background: #fef3f2;
+  color: #b42318;
+  box-shadow: none;
+  font-size: 12px;
+  line-height: 1;
+  gap: 4px;
+}
+
+.category-delete-btn:hover {
+  background: #fee4e2;
+  border-color: #b42318;
+  color: #912018;
+}
+
+.category-delete-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .admin-site-modal {
