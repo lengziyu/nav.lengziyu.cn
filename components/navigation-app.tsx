@@ -449,20 +449,8 @@ function SiteCard({
     const onResize = () => run();
     window.addEventListener("resize", onResize);
 
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(() => run());
-      if (descriptionRef.current) {
-        observer.observe(descriptionRef.current);
-      }
-      if (tagRowRef.current) {
-        observer.observe(tagRowRef.current);
-      }
-    }
-
     return () => {
       window.removeEventListener("resize", onResize);
-      observer?.disconnect();
     };
   }, [site.description, site.tags]);
 

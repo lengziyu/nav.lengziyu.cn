@@ -369,13 +369,10 @@ a {
   gap: 9px;
   flex-wrap: wrap;
   align-content: flex-start;
-  max-height: 28px;
+  min-height: 56px;
+  max-height: 56px;
   overflow: hidden;
   transition: max-height 0.24s ease;
-}
-
-.site-card.can-lift:hover .site-tag-row {
-  max-height: 60px;
 }
 
 .site-tag-row span {
@@ -1145,22 +1142,32 @@ a {
 
 .category-delete-btn {
   justify-self: end;
-  min-width: 108px;
-  padding: 5px 10px;
-  border-radius: 10px;
+  min-width: 86px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
   border: 1px solid #d92d20;
   background: #fef3f2;
   color: #b42318;
   box-shadow: none;
-  font-size: 12px;
-  line-height: 1;
-  gap: 4px;
+  font-size: 13px;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 .category-delete-btn:hover {
   background: #fee4e2;
   border-color: #b42318;
   color: #912018;
+}
+
+.category-delete-btn svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
 }
 
 .category-delete-btn:disabled {
