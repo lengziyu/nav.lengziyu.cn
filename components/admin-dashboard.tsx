@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Heart, Layers, Sparkles, Trash2, Eye } from "lucide-react";
+import { ClipboardList, Eye, GitFork, Heart, Layers, Sparkles, Trash2, Upload, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -19,7 +19,7 @@ import {
 
 type CategoryStyle = "CARD" | "LIST";
 type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
-type AdminMenuKey = "overview" | "categories" | "publish" | "review";
+type AdminMenuKey = "overview" | "categories" | "publish" | "githubBatch" | "review";
 type AiProvider = "openrouter" | "gemini";
 
 type AdminCategory = {
@@ -72,10 +72,36 @@ type AdminSite = {
   publisherName: string;
 };
 
+type GithubRepoDraft = {
+  id: string;
+  fullName: string;
+  url: string;
+  homepage: string;
+  description: string;
+  stars: number;
+  language: string;
+  topics: string[];
+  coverImageUrl: string;
+};
+
+type BatchSiteDraft = {
+  id: string;
+  sourceUrl: string;
+  title: string;
+  description: string;
+  url: string;
+  coverImageUrl: string;
+  categoryId: string;
+  suggestedCategoryName: string;
+  suggestedCategoryStyle: CategoryStyle;
+  tags: string[];
+};
+
 const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
   { key: "overview", label: "仪表盘", desc: "总览" },
   { key: "categories", label: "分类管理", desc: "目录风格" },
   { key: "publish", label: "发布站点", desc: "管理员发布" },
+  { key: "githubBatch", label: "批量爬取", desc: "GitHub AI 项目" },
   { key: "review", label: "投稿审核", desc: "访客推荐" },
 ];
 
@@ -108,8 +134,14 @@ export default function AdminDashboard() {
   const [editingSiteId, setEditingSiteId] = useState("");
   const [siteModalOpen, setSiteModalOpen] = useState(false);
   const [siteModalMode, setSiteModalMode] = useState<"create" | "edit">("create");
+  const [siteCoverUploading, setSiteCoverUploading] = useState(false);
   const [publishCategoryFilter, setPublishCategoryFilter] = useState("all");
   const [publishPage, setPublishPage] = useState(1);
+  const [batchQuery, setBatchQuery] = useState("topic:ai stars:>1000");
+  const [batchDrafts, setBatchDrafts] = useState<BatchSiteDraft[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchPublishing, setBatchPublishing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState("");
   const [aiAnalyzeUrl, setAiAnalyzeUrl] = useState("");
   const [aiModels, setAiModels] = useState<string[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>("openrouter");
@@ -129,6 +161,7 @@ export default function AdminDashboard() {
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
   const aiModelsRequestIdRef = useRef(0);
+  const siteCoverInputRef = useRef<HTMLInputElement>(null);
 
   const stats = useMemo(() => {
     const likes = sites.reduce((sum, site) => sum + site.likes, 0);
@@ -301,7 +334,7 @@ export default function AdminDashboard() {
   }, [categories]);
 
   useEffect(() => {
-    if (activeMenu !== "publish") {
+    if (activeMenu !== "publish" && activeMenu !== "githubBatch") {
       return;
     }
 
@@ -385,6 +418,30 @@ export default function AdminDashboard() {
       .filter(Boolean);
   }
 
+  function toGithubRepoTitle(name: string) {
+    return name
+      .replace(/\.git$/i, "")
+      .split(/[^a-zA-Z0-9]+/)
+      .filter(Boolean)
+      .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+      .join("")
+      .replace(/Ai/g, "AI")
+      .replace(/Llm/g, "LLM")
+      .replace(/Gpt/g, "GPT")
+      .replace(/Api/g, "API")
+      .replace(/Ui/g, "UI");
+  }
+
+  function updateBatchDraft(id: string, patch: Partial<BatchSiteDraft>) {
+    setBatchDrafts((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+
+  function removeBatchDraft(id: string) {
+    setBatchDrafts((prev) => prev.filter((item) => item.id !== id));
+  }
+
   function addTagFromInput() {
     const tags = parseTagInput(siteTagInput);
     if (tags.length === 0) {
@@ -412,6 +469,7 @@ export default function AdminDashboard() {
     setSiteDescription("");
     setSiteUrl("");
     setSiteCoverImage("");
+    setSiteCoverUploading(false);
     setSiteTags([]);
     setSiteTagInput("");
     setEditingSiteId("");
@@ -419,6 +477,9 @@ export default function AdminDashboard() {
     setAiMessage("");
     setSuggestedCategoryName("");
     setSuggestedCategoryStyle("CARD");
+    if (siteCoverInputRef.current) {
+      siteCoverInputRef.current.value = "";
+    }
   }
 
   function onOpenCreateSiteModal() {
@@ -444,6 +505,52 @@ export default function AdminDashboard() {
     setSiteTags(site.tags.map((tag) => tag.name));
     setSiteModalOpen(true);
     setMessage("");
+  }
+
+  function onOpenCoverUpload() {
+    siteCoverInputRef.current?.click();
+  }
+
+  async function onUploadSiteCover(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setMessage("");
+    setSiteCoverUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/admin/upload/cover", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.status === 401) {
+        router.replace("/admin/login");
+        throw new Error("请先登录后台");
+      }
+
+      const result = (await response.json().catch(() => ({ message: "上传失败" }))) as {
+        message?: string;
+        url?: string;
+      };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.message || "上传失败");
+      }
+
+      setSiteCoverImage(result.url);
+      setMessage("封面上传成功");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "封面上传失败");
+    } finally {
+      setSiteCoverUploading(false);
+      event.target.value = "";
+    }
   }
 
   async function onAnalyzeUrl() {
@@ -515,6 +622,201 @@ export default function AdminDashboard() {
       setAiMessage(error instanceof Error ? error.message : "AI 解析失败");
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function onFetchGithubBatch() {
+    setBatchProgress("");
+
+    if (aiModelsLoading) {
+      setBatchProgress("模型列表加载中，请稍后再试");
+      return;
+    }
+
+    if (!aiModel) {
+      setBatchProgress("请先选择模型");
+      return;
+    }
+
+    setBatchLoading(true);
+    setBatchDrafts([]);
+
+    try {
+      const query = batchQuery.trim() || "topic:ai stars:>1000";
+      const repoResult = await fetchJson<{ repos: GithubRepoDraft[] }>(
+        `/api/admin/github/repos?query=${encodeURIComponent(query)}&limit=10`,
+      );
+      const repos = repoResult.repos ?? [];
+
+      if (repos.length === 0) {
+        setBatchProgress("没有抓取到仓库，请调整关键词重试");
+        return;
+      }
+
+      const drafts: BatchSiteDraft[] = [];
+
+      for (let index = 0; index < repos.length; index += 1) {
+        const repo = repos[index];
+        setBatchProgress(`AI 正在解析 ${index + 1}/${repos.length}：${repo.fullName}`);
+
+        try {
+          const result = await fetchJson<{
+            message?: string;
+            data?: {
+              title: string;
+              description: string;
+              tags: string[];
+              coverImageUrl: string;
+              categoryName: string;
+              categoryStyle: CategoryStyle;
+              matchedCategoryId: string;
+            };
+          }>("/api/admin/ai/analyze", {
+            method: "POST",
+            body: JSON.stringify({
+              url: repo.url,
+              provider: aiProvider,
+              model: aiModel,
+            }),
+          });
+
+          const data = result.data;
+          if (!data) {
+            throw new Error(result.message || "AI 解析为空");
+          }
+
+          drafts.push({
+            id: `${repo.id}-${index}`,
+            sourceUrl: repo.url,
+            title: data.title || toGithubRepoTitle(repo.fullName.split("/").pop() || repo.fullName),
+            description: data.description || repo.description || "",
+            url: repo.homepage || repo.url,
+            coverImageUrl: data.coverImageUrl || repo.coverImageUrl,
+            categoryId: data.matchedCategoryId || "",
+            suggestedCategoryName: data.categoryName || "",
+            suggestedCategoryStyle: data.categoryStyle || "CARD",
+            tags: data.tags ?? [],
+          });
+        } catch {
+          drafts.push({
+            id: `${repo.id}-${index}`,
+            sourceUrl: repo.url,
+            title: toGithubRepoTitle(repo.fullName.split("/").pop() || repo.fullName),
+            description:
+              repo.description ||
+              `${repo.fullName} 是一个热门开源 AI 项目，建议补充简介后再发布。`,
+            url: repo.homepage || repo.url,
+            coverImageUrl: repo.coverImageUrl,
+            categoryId: "",
+            suggestedCategoryName: "",
+            suggestedCategoryStyle: "CARD",
+            tags: [repo.language, ...repo.topics, "开源"].filter(Boolean).slice(0, 8),
+          });
+        }
+      }
+
+      setBatchDrafts(drafts);
+      setBatchProgress(`已生成 ${drafts.length} 条草稿，可删除/修改后发布`);
+    } catch (error) {
+      setBatchProgress(error instanceof Error ? error.message : "批量抓取失败");
+    } finally {
+      setBatchLoading(false);
+    }
+  }
+
+  function findCategoryIdByName(name: string, source: AdminCategory[]) {
+    const normalized = name.trim().toLowerCase();
+    if (!normalized) {
+      return "";
+    }
+    return source.find((item) => item.name.trim().toLowerCase() === normalized)?.id ?? "";
+  }
+
+  async function ensureBatchCategoryId(
+    draft: BatchSiteDraft,
+    createdCategoryMap: Map<string, string>,
+  ) {
+    if (draft.categoryId) {
+      return draft.categoryId;
+    }
+
+    const name = draft.suggestedCategoryName.trim();
+    if (!name) {
+      throw new Error(`《${draft.title}》缺少分类，请先选择或填写推荐分类`);
+    }
+
+    const key = name.toLowerCase();
+    const mappedId = createdCategoryMap.get(key);
+    if (mappedId) {
+      return mappedId;
+    }
+
+    const existingId = findCategoryIdByName(name, categories);
+    if (existingId) {
+      createdCategoryMap.set(key, existingId);
+      return existingId;
+    }
+
+    const created = await fetchJson<{ category: AdminCategory }>("/api/admin/categories", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description: "GitHub 批量爬取自动创建",
+        style: draft.suggestedCategoryStyle,
+      }),
+    });
+
+    createdCategoryMap.set(key, created.category.id);
+    setCategories((prev) => [created.category, ...prev]);
+    return created.category.id;
+  }
+
+  async function onPublishBatchDrafts() {
+    setMessage("");
+    setBatchProgress("");
+
+    if (batchDrafts.length === 0) {
+      setBatchProgress("请先抓取并生成草稿");
+      return;
+    }
+
+    setBatchPublishing(true);
+
+    try {
+      const createdCategoryMap = new Map<string, string>();
+      let successCount = 0;
+
+      for (let index = 0; index < batchDrafts.length; index += 1) {
+        const draft = batchDrafts[index];
+        setBatchProgress(`发布中 ${index + 1}/${batchDrafts.length}：${draft.title}`);
+
+        const resolvedCategoryId = await ensureBatchCategoryId(draft, createdCategoryMap);
+        const safeUrl = normalizeUrlInput(draft.url || draft.sourceUrl);
+
+        await fetchJson<{ site: AdminSite }>("/api/admin/sites", {
+          method: "POST",
+          body: JSON.stringify({
+            title: draft.title,
+            description: draft.description,
+            url: safeUrl,
+            coverImageUrl: draft.coverImageUrl || undefined,
+            categoryId: resolvedCategoryId,
+            tags: draft.tags,
+          }),
+        });
+
+        successCount += 1;
+      }
+
+      setBatchDrafts([]);
+      setBatchProgress(`已成功发布 ${successCount} 条站点`);
+      setMessage(`批量发布成功，共 ${successCount} 条`);
+      await refreshData();
+      setActiveMenu("publish");
+    } catch (error) {
+      setBatchProgress(error instanceof Error ? error.message : "批量发布失败");
+    } finally {
+      setBatchPublishing(false);
     }
   }
 
@@ -964,6 +1266,167 @@ export default function AdminDashboard() {
             </section>
           ) : null}
 
+          {activeMenu === "githubBatch" ? (
+            <section className="admin-panel-group">
+              <section className="admin-card full-width">
+                <div className="admin-site-toolbar">
+                  <h2 className="github-menu-title"><GitFork size={18} /> 批量爬取 GitHub AI 项目</h2>
+                </div>
+
+                <div className="github-batch-toolbar">
+                  <input
+                    value={batchQuery}
+                    placeholder="GitHub 搜索关键词，例如 topic:agent stars:>1000"
+                    onChange={(event) => setBatchQuery(event.target.value)}
+                  />
+                  <select
+                    value={aiProvider}
+                    onChange={(event) => {
+                      setAiProvider(event.target.value as AiProvider);
+                    }}
+                  >
+                    <option value="openrouter">OpenRouter（云）</option>
+                    <option value="gemini">Gemini（云）</option>
+                  </select>
+                  <select
+                    value={aiModel}
+                    disabled={aiModelsLoading}
+                    onChange={(event) => setAiModel(event.target.value)}
+                  >
+                    <option value="">请选择模型</option>
+                    {aiModels.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={batchLoading || aiModelsLoading || batchPublishing || !aiModel}
+                    onClick={() => void onFetchGithubBatch()}
+                  >
+                    {batchLoading ? "抓取并分析中..." : "批量抓取 10 条"}
+                  </button>
+                </div>
+
+                {batchProgress ? <div className="github-batch-progress">{batchProgress}</div> : null}
+
+                <div className="github-draft-list">
+                  {batchDrafts.map((draft, index) => (
+                    <article key={draft.id} className="github-draft-card">
+                      <header>
+                        <strong>#{index + 1} {draft.title || "未命名项目"}</strong>
+                        <div>
+                          <a href={draft.sourceUrl} target="_blank" rel="noreferrer">
+                            查看仓库
+                          </a>
+                          <button
+                            type="button"
+                            className="btn-ghost"
+                            onClick={() => removeBatchDraft(draft.id)}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </header>
+
+                      <div className="github-draft-grid">
+                        <input
+                          value={draft.title}
+                          placeholder="标题"
+                          onChange={(event) => updateBatchDraft(draft.id, { title: event.target.value })}
+                        />
+                        <input
+                          value={draft.url}
+                          placeholder="站点 URL（可改为官网链接）"
+                          onChange={(event) => updateBatchDraft(draft.id, { url: event.target.value })}
+                        />
+                        <textarea
+                          value={draft.description}
+                          placeholder="描述"
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              description: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          value={draft.coverImageUrl}
+                          placeholder="封面 URL"
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              coverImageUrl: event.target.value,
+                            })
+                          }
+                        />
+                        <select
+                          value={draft.categoryId}
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              categoryId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">按推荐分类自动创建/匹配</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={draft.suggestedCategoryName}
+                          placeholder="推荐分类名（未命中时会自动创建）"
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              suggestedCategoryName: event.target.value,
+                            })
+                          }
+                        />
+                        <select
+                          value={draft.suggestedCategoryStyle}
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              suggestedCategoryStyle: event.target.value as CategoryStyle,
+                            })
+                          }
+                        >
+                          <option value="CARD">推荐分类风格：卡片</option>
+                          <option value="LIST">推荐分类风格：列表</option>
+                        </select>
+                        <input
+                          value={draft.tags.join(", ")}
+                          placeholder="标签，逗号分隔"
+                          onChange={(event) =>
+                            updateBatchDraft(draft.id, {
+                              tags: parseTagInput(event.target.value).slice(0, 8),
+                            })
+                          }
+                        />
+                      </div>
+                    </article>
+                  ))}
+
+                  {!batchLoading && batchDrafts.length === 0 ? (
+                    <div className="admin-empty">先点击“批量抓取 10 条”，生成可编辑草稿后再发布。</div>
+                  ) : null}
+                </div>
+
+                {batchDrafts.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn-primary github-publish-btn"
+                    disabled={batchLoading || batchPublishing}
+                    onClick={() => void onPublishBatchDrafts()}
+                  >
+                    {batchPublishing ? "发布中..." : `确定并发布 ${batchDrafts.length} 条`}
+                  </button>
+                ) : null}
+              </section>
+            </section>
+          ) : null}
+
           {activeMenu === "review" ? (
             <section className="admin-panel-group">
               <section className="admin-card full-width">
@@ -1018,10 +1481,22 @@ export default function AdminDashboard() {
           ) : null}
 
           {siteModalOpen ? (
-            <div className="modal-mask" onClick={onCloseSiteModal}>
+            <div className="modal-mask">
               <div className="modal-panel admin-site-modal" onClick={(event) => event.stopPropagation()}>
-                <h3>{siteModalMode === "edit" ? "编辑站点" : "新增站点"}</h3>
-                <p>填写站点信息后保存，支持分类和标签。</p>
+                <div className="modal-title-row">
+                  <div>
+                    <h3>{siteModalMode === "edit" ? "编辑站点" : "新增站点"}</h3>
+                    <p>填写站点信息后保存，支持分类和标签。</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="modal-close-btn"
+                    aria-label="关闭弹框"
+                    onClick={onCloseSiteModal}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
 
                 <div className="ai-assist-panel">
                   <strong><Sparkles size={14} /> AI 链接解析</strong>
@@ -1104,6 +1579,24 @@ export default function AdminDashboard() {
                     placeholder="封面 URL（可选）"
                     onChange={(event) => setSiteCoverImage(event.target.value)}
                   />
+                  <div className="field-half cover-upload-wrap">
+                    <button
+                      type="button"
+                      className="btn-ghost cover-upload-btn"
+                      disabled={siteCoverUploading}
+                      onClick={onOpenCoverUpload}
+                    >
+                      <Upload size={14} />
+                      {siteCoverUploading ? "上传中..." : "上传封面图片"}
+                    </button>
+                    <input
+                      ref={siteCoverInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                      className="cover-upload-input"
+                      onChange={(event) => void onUploadSiteCover(event)}
+                    />
+                  </div>
                   <select
                     className="field-third"
                     required

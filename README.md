@@ -51,6 +51,7 @@ npm run dev
 - `ADMIN_PASSWORD`
 - `OPENROUTER_API_KEY`（可选，使用 OpenRouter 云模型时需要）
 - `GEMINI_API_KEY`（可选，使用 Gemini 云模型时需要）
+- `GITHUB_TOKEN`（可选，用于提高 GitHub 批量抓取频率限制）
 
 本地默认值在 `.env`：`admin123`（上线请务必修改）。
 
