@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
@@ -426,8 +426,32 @@ function SiteCard({
   onOpenSite: (site: PublicSite) => Promise<void>;
   onLike: (siteId: string) => Promise<void>;
 }) {
+  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const [liftOnHover, setLiftOnHover] = useState(false);
+
+  useEffect(() => {
+    const checkCanLift = () => {
+      const el = descriptionRef.current;
+      if (!el) {
+        setLiftOnHover(false);
+        return;
+      }
+
+      const overTwoLines = el.scrollHeight - el.clientHeight > 1;
+      setLiftOnHover(overTwoLines);
+    };
+
+    const run = () => window.requestAnimationFrame(checkCanLift);
+    run();
+    window.addEventListener("resize", run);
+
+    return () => {
+      window.removeEventListener("resize", run);
+    };
+  }, [site.description, site.tags]);
+
   return (
-    <article className="site-card" onClick={() => void onOpenSite(site)}>
+    <article className={`site-card ${liftOnHover ? "can-lift" : ""}`} onClick={() => void onOpenSite(site)}>
       <div className="site-card-cover" style={{ background: site.fallbackColor }}>
         {site.coverImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -440,7 +464,7 @@ function SiteCard({
       <div className="site-card-body">
         <div className="site-card-main">
           <h3>{site.title}</h3>
-          <p>{site.description}</p>
+          <p ref={descriptionRef}>{site.description}</p>
           <div className="site-tag-row">
             {site.tags.slice(0, 3).map((tag) => (
               <span key={tag.id} className={`tag-chip ${getTagToneClass(tag.name)}`}>
