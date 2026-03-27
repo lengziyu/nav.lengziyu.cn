@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
@@ -426,34 +426,8 @@ function SiteCard({
   onOpenSite: (site: PublicSite) => Promise<void>;
   onLike: (siteId: string) => Promise<void>;
 }) {
-  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
-  const tagRowRef = useRef<HTMLDivElement | null>(null);
-  const [liftOnHover, setLiftOnHover] = useState(false);
-
-  useEffect(() => {
-    const updateLiftState = () => {
-      const descriptionOverflow = descriptionRef.current
-        ? descriptionRef.current.scrollHeight - descriptionRef.current.clientHeight > 1
-        : false;
-      setLiftOnHover(descriptionOverflow);
-    };
-
-    const run = () => window.requestAnimationFrame(updateLiftState);
-    run();
-
-    const onResize = () => run();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-    };
-  }, [site.description, site.tags]);
-
   return (
-    <article
-      className={`site-card ${liftOnHover ? "can-lift" : ""}`}
-      onClick={() => void onOpenSite(site)}
-    >
+    <article className="site-card" onClick={() => void onOpenSite(site)}>
       <div className="site-card-cover" style={{ background: site.fallbackColor }}>
         {site.coverImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -466,8 +440,8 @@ function SiteCard({
       <div className="site-card-body">
         <div className="site-card-main">
           <h3>{site.title}</h3>
-          <p ref={descriptionRef}>{site.description}</p>
-          <div className="site-tag-row" ref={tagRowRef}>
+          <p>{site.description}</p>
+          <div className="site-tag-row">
             {site.tags.slice(0, 3).map((tag) => (
               <span key={tag.id} className={`tag-chip ${getTagToneClass(tag.name)}`}>
                 {tag.name}
