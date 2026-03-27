@@ -241,7 +241,7 @@ a {
   background: #fff;
   box-shadow: 0 8px 18px rgba(25, 42, 74, 0.08);
   cursor: pointer;
-  height: 384px;
+  height: 354px;
   display: flex;
   flex-direction: column;
   transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
@@ -314,6 +314,7 @@ a {
 .site-card-body {
   min-height: 0;
   padding: 12px;
+  padding-bottom: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -470,7 +471,6 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  margin-top: 4px;
 }
 
 .site-metric-row {
@@ -559,7 +559,7 @@ a {
 }
 
 .site-list-content .site-meta-row {
-  margin-top: 6px;
+  margin-top: 1px;
   justify-content: flex-start;
   gap: 8px;
 }
