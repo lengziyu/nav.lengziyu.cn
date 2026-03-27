@@ -345,7 +345,6 @@ a {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  min-height: calc(1.2em * 2);
 }
 
 .site-card:hover h3 {
@@ -366,11 +365,12 @@ a {
 .site-card-main p {
   -webkit-line-clamp: 2;
   min-height: calc(1.5em * 2);
+  margin-top: 6px;
 }
 
 .site-tag-row {
-  margin-top: 14px;
-  margin-bottom: 6px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   display: flex;
   gap: 9px;
   flex-wrap: wrap;
@@ -460,7 +460,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  margin-top: auto;
+  margin-top: 6px;
 }
 
 .site-metric-row {
