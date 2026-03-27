@@ -335,7 +335,7 @@ a {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .site-card-main h3,
@@ -470,7 +470,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  margin-top: auto;
+  margin-top: 4px;
 }
 
 .site-metric-row {
