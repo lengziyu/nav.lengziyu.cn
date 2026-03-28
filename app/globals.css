@@ -194,7 +194,7 @@ a {
 
 .search-shell svg {
   position: absolute;
-  left: 14px;
+  left: 16px;
   z-index: 2;
   color: color-mix(in srgb, var(--brand-blue) 72%, var(--text-sub));
   pointer-events: none;
@@ -215,7 +215,7 @@ a {
   z-index: 1;
   border: 0;
   border-radius: 0;
-  padding: 11px 14px 11px 42px;
+  padding: 11px 14px 11px 50px;
   font: inherit;
   font-size: 14px;
   color: var(--text-main);
@@ -241,7 +241,7 @@ a {
 }
 
 .search-shell-large {
-  max-width: 560px;
+  max-width: 440px;
 }
 
 .search-shell-compact {
@@ -253,7 +253,7 @@ a {
 }
 
 .search-shell-compact svg {
-  left: 13px;
+  left: 15px;
 }
 
 @keyframes search-shell-sheen {
@@ -440,7 +440,7 @@ a {
   justify-content: flex-end;
   gap: 12px;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .content-head p {
@@ -449,8 +449,8 @@ a {
 }
 
 .content-search-wrap {
-  width: min(100%, 260px);
-  min-width: 220px;
+  width: min(100%, 220px);
+  min-width: 190px;
 }
 
 .content-search-input {
@@ -1452,13 +1452,13 @@ a {
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 1;
 }
 
 .admin-site-toolbar-search {
-  width: min(100%, 320px);
-  min-width: 220px;
-  margin-right: 4px;
+  width: min(100%, 260px);
+  min-width: 190px;
 }
 
 .admin-site-toolbar-actions input,
@@ -1473,6 +1473,7 @@ a {
 }
 
 .admin-site-toolbar-actions select {
+  flex: 0 0 200px;
   border: 1px solid var(--line-strong);
 }
 
@@ -2282,6 +2283,7 @@ html[data-theme="dark"] .admin-tag-chip {
 
   .admin-site-toolbar-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .admin-site-toolbar-search,
@@ -2351,6 +2353,7 @@ html[data-theme="dark"] .admin-tag-chip {
   .content-head-actions {
     width: 100%;
     justify-content: stretch;
+    flex-wrap: wrap;
   }
 
   .content-search-wrap {

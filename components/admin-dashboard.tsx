@@ -275,6 +275,14 @@ export default function AdminDashboard() {
     return scopedSites.filter((site) => matchesTitleSearch(site.title, deferredPublishSearch));
   }, [deferredPublishSearch, publishCategoryFilter, sites]);
 
+  const publishSearchLabel = useMemo(() => {
+    if (publishCategoryFilter === "all") {
+      return "全站";
+    }
+
+    return categories.find((category) => category.id === publishCategoryFilter)?.name ?? "当前分类";
+  }, [categories, publishCategoryFilter]);
+
   const publishTotalPages = Math.max(1, Math.ceil(filteredPublishSites.length / PUBLISH_PAGE_SIZE));
 
   const pagedPublishSites = useMemo(() => {
@@ -1286,9 +1294,9 @@ export default function AdminDashboard() {
                       <input
                         type="search"
                         value={publishSearchInput}
-                        placeholder={publishCategoryFilter === "all" ? "搜索全站" : "搜索分类"}
+                        placeholder={`搜索 ${publishSearchLabel}`}
                         onChange={(event) => setPublishSearchInput(event.target.value)}
-                        aria-label="搜索发布站点"
+                        aria-label={`搜索 ${publishSearchLabel}`}
                       />
                     </label>
                     <select

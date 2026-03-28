@@ -217,6 +217,7 @@ export default function NavigationApp() {
   }, [activeSites, allSites, deferredGlobalSearch, sortMode]);
 
   const contentTitle = deferredGlobalSearch ? "全局搜索结果" : activeCategory?.name ?? "导航";
+  const activeCategorySearchLabel = activeCategory?.name ?? "当前分类";
   const contentDescription = deferredGlobalSearch
     ? `按标题模糊匹配“${deferredGlobalSearch}”，共找到 ${visibleSites.length} 条结果`
     : deferredCategorySearch
@@ -415,10 +416,10 @@ export default function NavigationApp() {
                   <input
                     type="search"
                     className="content-search-input"
-                    placeholder="搜索分类"
+                    placeholder={`搜索 ${activeCategorySearchLabel}`}
                     value={categorySearchInput}
                     onChange={(event) => setCategorySearchInput(event.target.value)}
-                    aria-label="搜索当前分类"
+                    aria-label={`搜索 ${activeCategorySearchLabel}`}
                   />
                 </label>
               </div>
