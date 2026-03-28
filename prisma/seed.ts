@@ -677,8 +677,15 @@ const carrotCategoryMap: Record<string, CarrotCategoryConfig> = {
   },
 };
 
+function sanitizeUnicode(value: string) {
+  return [...value].filter((char) => {
+    const codePoint = char.codePointAt(0);
+    return codePoint !== undefined && (codePoint < 0xd800 || codePoint > 0xdfff);
+  }).join("");
+}
+
 function cleanSiteUrl(rawUrl: string) {
-  const input = rawUrl.trim();
+  const input = sanitizeUnicode(rawUrl).trim();
   if (!input) {
     return "";
   }
@@ -698,14 +705,14 @@ function normalizeUrlKey(rawUrl: string) {
 }
 
 function cleanCarrotDescription(text: string) {
-  const cleaned = text
-    .replace(/[🆕⭐😄🔑✈️🌏👍🔥]+/g, " ")
+  const cleaned = sanitizeUnicode(text)
+    .replace(/(?:🆕|⭐|😄|🔑|✈️|🌏|👍|🔥)+/gu, " ")
     .replace(/[|｜]/g, " · ")
     .replace(/\.\.\.+/g, "…")
     .replace(/\s+/g, " ")
     .trim();
 
-  return cleaned || "来自 carrot 导航整理的站点。";
+  return sanitizeUnicode(cleaned || "来自 carrot 导航整理的站点。");
 }
 
 function getStatusTags(entry: CarrotEntry, hotRank?: number) {
@@ -790,13 +797,13 @@ function buildCarrotSites() {
 
     const key = normalizeUrlKey(entry.url);
     const hotRank = hotRankMap.get(key);
-    const title = entry.title.trim();
+    const title = sanitizeUnicode(entry.title.trim());
     const description = cleanCarrotDescription(entry.description);
     const tags = normalizeTagList([
       mappedCategory.sectionTag,
       "Carrot",
       ...getStatusTags(entry, hotRank),
-    ]);
+    ]).map((tag) => sanitizeUnicode(tag));
     const views = getCarrotViews(entry.section, entry.rank, hotRank);
     const likes = getCarrotLikes(views, entry.rank, hotRank);
 
@@ -904,11 +911,11 @@ async function main() {
 
     await prisma.site.create({
       data: {
-        title: site.title,
-        description: site.description,
-        url: site.url,
-        coverImageUrl: site.coverImageUrl,
-        fallbackColor: getFallbackColor(site.title),
+        title: sanitizeUnicode(site.title),
+        description: sanitizeUnicode(site.description),
+        url: cleanSiteUrl(site.url),
+        coverImageUrl: site.coverImageUrl ? sanitizeUnicode(site.coverImageUrl) : undefined,
+        fallbackColor: getFallbackColor(sanitizeUnicode(site.title)),
         likes: site.likes ?? 0,
         views: site.views ?? 0,
         categoryId,
@@ -916,10 +923,10 @@ async function main() {
         publisherName: "管理员",
         tags: {
           connectOrCreate: site.tags.map((tag) => ({
-            where: { name: tag },
+            where: { name: sanitizeUnicode(tag) },
             create: {
-              name: tag,
-              slug: slugify(tag) || `tag-${Math.random().toString(36).slice(2, 8)}`,
+              name: sanitizeUnicode(tag),
+              slug: slugify(sanitizeUnicode(tag)) || `tag-${Math.random().toString(36).slice(2, 8)}`,
             },
           })),
         },
