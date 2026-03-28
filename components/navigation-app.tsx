@@ -599,7 +599,6 @@ function SiteCover({ site, mode }: { site: PublicSite; mode: "card" | "list" }) 
           </div>
         )}
         <div className={`generated-cover-content ${mode}`}>
-          <small>{mode === "card" ? "精选推荐" : "导航"}</small>
           <strong>{site.title}</strong>
         </div>
       </div>

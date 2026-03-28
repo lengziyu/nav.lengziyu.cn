@@ -21,13 +21,15 @@ export async function PATCH(
   }
 
   try {
+    const updateData: Record<string, unknown> = {
+      description: parsed.data.description,
+      style: parsed.data.style,
+      defaultSort: parsed.data.defaultSort,
+    };
+
     const category = await prisma.category.update({
       where: { id },
-      data: {
-        description: parsed.data.description,
-        style: parsed.data.style,
-        defaultSort: parsed.data.defaultSort,
-      },
+      data: updateData as never,
     });
 
     return NextResponse.json({ category });

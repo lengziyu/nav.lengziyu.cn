@@ -39,16 +39,17 @@ export async function POST(request: NextRequest) {
 
   const count = await prisma.category.count();
   const slugBase = slugify(parsed.data.name) || `category-${Date.now()}`;
+  const categoryData: Record<string, unknown> = {
+    name: parsed.data.name,
+    slug: `${slugBase}-${Date.now().toString().slice(-4)}`,
+    description: parsed.data.description || null,
+    style: parsed.data.style,
+    defaultSort: parsed.data.defaultSort,
+    sortOrder: count,
+  };
 
   const category = await prisma.category.create({
-    data: {
-      name: parsed.data.name,
-      slug: `${slugBase}-${Date.now().toString().slice(-4)}`,
-      description: parsed.data.description || null,
-      style: parsed.data.style,
-      defaultSort: parsed.data.defaultSort,
-      sortOrder: count,
-    },
+    data: categoryData as never,
   });
 
   return NextResponse.json({ category });

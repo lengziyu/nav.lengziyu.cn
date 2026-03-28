@@ -443,7 +443,6 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 8px;
   color: #f8fafc;
 }
 
@@ -479,13 +478,6 @@ a {
   font-weight: 700;
 }
 
-.generated-cover-content small {
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  opacity: 0.82;
-}
-
 .generated-cover-content strong {
   display: -webkit-box;
   overflow: hidden;
@@ -496,23 +488,25 @@ a {
 
 .generated-cover-content.card {
   height: 100%;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  padding: 38px 24px 24px;
+  text-align: center;
 }
 
 .generated-cover-content.card strong {
   -webkit-line-clamp: 3;
-  font-size: 28px;
-  max-width: 82%;
+  font-size: 30px;
+  max-width: 88%;
+  margin-top: 34px;
+  text-shadow: 0 12px 28px rgba(18, 28, 45, 0.22);
+  transform: translateY(-10px);
 }
 
 .generated-cover-content.list {
   height: 100%;
   justify-content: center;
   padding: 12px;
-}
-
-.generated-cover-content.list small {
-  font-size: 9px;
 }
 
 .generated-cover-content.list strong {
