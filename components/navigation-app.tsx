@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
@@ -21,6 +21,7 @@ type PublicSite = {
   fallbackColor: string;
   likes: number;
   views: number;
+  publishedAt: string;
   publisherName: string;
   publisherType: "ADMIN" | "GUEST";
   tags: PublicTag[];
@@ -59,6 +60,8 @@ const initialForm: RecommendForm = {
   contact: "",
 };
 
+type SortMode = "hot" | "latest";
+
 function getTagToneClass(tag: string) {
   const tones = [
     "tag-tone-0",
@@ -85,12 +88,57 @@ function isCompactLogoCover(url: string | null) {
     return false;
   }
 
-  return /site-icons|favicon|\.ico(?:$|\?)/i.test(url);
+  return /ai55\.cc|site-icons|favicon|\.ico(?:$|\?)/i.test(url);
+}
+
+function shouldUseGeneratedCover(site: PublicSite) {
+  if (!site.coverImageUrl) {
+    return true;
+  }
+
+  return isCompactLogoCover(site.coverImageUrl);
+}
+
+function getCoverAccent(seed: string) {
+  const palette = ["#4cc9f0", "#ff8a3d", "#22c55e", "#f97316", "#818cf8", "#14b8a6", "#ec4899", "#0ea5e9"];
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function getGeneratedCoverStyle(site: PublicSite): CSSProperties {
+  const accent = getCoverAccent(site.title);
+  return {
+    background: `
+      radial-gradient(circle at 18% 18%, ${accent}55, transparent 34%),
+      radial-gradient(circle at 84% 24%, ${site.fallbackColor}aa, transparent 38%),
+      linear-gradient(140deg, ${site.fallbackColor} 0%, color-mix(in srgb, ${accent} 48%, #0f172a) 100%)
+    `,
+  };
+}
+
+function getHotScore(site: PublicSite) {
+  return site.views + site.likes * 180;
+}
+
+function compareByHot(a: PublicSite, b: PublicSite) {
+  return getHotScore(b) - getHotScore(a) || b.views - a.views || b.likes - a.likes;
+}
+
+function compareByLatest(a: PublicSite, b: PublicSite) {
+  return (
+    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime() ||
+    compareByHot(a, b)
+  );
 }
 
 export default function NavigationApp() {
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
+  const [sortMode, setSortMode] = useState<SortMode>("hot");
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
@@ -107,6 +155,15 @@ export default function NavigationApp() {
   const activeCategory = useMemo(() => {
     return categories.find((category) => category.id === activeCategoryId) ?? categories[0] ?? null;
   }, [activeCategoryId, categories]);
+
+  const activeSites = useMemo(() => {
+    if (!activeCategory) {
+      return [];
+    }
+
+    const sorter = sortMode === "latest" ? compareByLatest : compareByHot;
+    return [...activeCategory.sites].sort(sorter);
+  }, [activeCategory, sortMode]);
 
   async function fetchNavigation() {
     setLoading(true);
@@ -269,9 +326,26 @@ export default function NavigationApp() {
 
         <main className="content-panel">
           <div className="content-head">
-            <h2>{activeCategory?.name ?? "导航"}</h2>
-            <p>{activeCategory?.description ?? "按分类浏览推荐网站"}</p>
-            <div className="content-head-badge">当前分类按热门排序</div>
+            <div>
+              <h2>{activeCategory?.name ?? "导航"}</h2>
+              <p>{activeCategory?.description ?? "按分类浏览推荐网站"}</p>
+            </div>
+            <div className="content-sort-row" aria-label="站点排序方式">
+              <button
+                type="button"
+                className={`sort-chip ${sortMode === "hot" ? "active" : ""}`}
+                onClick={() => setSortMode("hot")}
+              >
+                最热
+              </button>
+              <button
+                type="button"
+                className={`sort-chip ${sortMode === "latest" ? "active" : ""}`}
+                onClick={() => setSortMode("latest")}
+              >
+                最新
+              </button>
+            </div>
           </div>
 
           {error ? <div className="error-box">{error}</div> : null}
@@ -280,22 +354,12 @@ export default function NavigationApp() {
             <CardSkeleton />
           ) : activeCategory?.style === "LIST" ? (
             <div className="site-list-wrap">
-              {activeCategory.sites.map((site) => (
+              {activeSites.map((site) => (
                 <article key={site.id} className="site-list-item" onClick={() => void onOpenSite(site)}>
-                  <div
-                    className={`site-list-cover ${isCompactLogoCover(site.coverImageUrl) ? "logo-mode" : ""}`}
-                    style={{ background: site.fallbackColor }}
-                  >
-                    {site.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={site.coverImageUrl} alt={site.title} />
-                    ) : (
-                      <span>{site.title.slice(0, 4)}</span>
-                    )}
-                  </div>
+                  <SiteCover site={site} mode="list" />
 
                   <div className="site-list-content">
-                    <h3>{site.title}</h3>
+                    <h3 title={site.title}>{site.title}</h3>
                     <p>{site.description}</p>
                     <div className="site-meta-row">
                       <span>{site.publisherName}</span>
@@ -318,11 +382,11 @@ export default function NavigationApp() {
                   </div>
                 </article>
               ))}
-              {activeCategory.sites.length === 0 ? <EmptyState /> : null}
+              {activeSites.length === 0 ? <EmptyState /> : null}
             </div>
           ) : (
             <div className="site-card-grid">
-              {activeCategory?.sites.map((site) => (
+              {activeSites.map((site) => (
                 <SiteCard
                   key={site.id}
                   site={site}
@@ -330,7 +394,7 @@ export default function NavigationApp() {
                   onLike={onLike}
                 />
               ))}
-              {activeCategory?.sites.length === 0 ? <EmptyState /> : null}
+              {activeSites.length === 0 ? <EmptyState /> : null}
             </div>
           )}
         </main>
@@ -443,7 +507,6 @@ function SiteCard({
 }) {
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
   const [liftOnHover, setLiftOnHover] = useState(false);
-  const compactCover = isCompactLogoCover(site.coverImageUrl);
 
   useEffect(() => {
     const checkCanLift = () => {
@@ -468,18 +531,11 @@ function SiteCard({
 
   return (
     <article className={`site-card ${liftOnHover ? "can-lift" : ""}`} onClick={() => void onOpenSite(site)}>
-      <div className={`site-card-cover ${compactCover ? "logo-mode" : ""}`} style={{ background: site.fallbackColor }}>
-        {site.coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={site.coverImageUrl} alt={site.title} />
-        ) : (
-          <span>{site.title}</span>
-        )}
-      </div>
+      <SiteCover site={site} mode="card" />
 
       <div className="site-card-body">
         <div className="site-card-main">
-          <h3>{site.title}</h3>
+          <h3 title={site.title}>{site.title}</h3>
           <p ref={descriptionRef}>{site.description}</p>
           <div className="site-tag-row">
             {site.tags.slice(0, 3).map((tag) => (
@@ -513,5 +569,31 @@ function SiteCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function SiteCover({ site, mode }: { site: PublicSite; mode: "card" | "list" }) {
+  const generated = shouldUseGeneratedCover(site);
+  const className = mode === "card" ? "site-card-cover" : "site-list-cover";
+
+  if (generated) {
+    return (
+      <div className={`${className} generated-cover`} style={getGeneratedCoverStyle(site)}>
+        <div className={`generated-cover-content ${mode}`}>
+          <small>{mode === "card" ? "精选推荐" : "导航"}</small>
+          <strong>{site.title}</strong>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${className} ${isCompactLogoCover(site.coverImageUrl) ? "logo-mode" : ""}`}
+      style={{ background: site.fallbackColor }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={site.coverImageUrl ?? ""} alt={site.title} />
+    </div>
   );
 }

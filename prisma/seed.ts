@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
 import carrotSnapshot from "../data/carrot-snapshot.json";
+import designSnapshot from "../data/design-snapshot.json";
+import frontendSnapshot from "../data/frontend-snapshot.json";
 import { getFallbackColor, normalizeTagList, slugify } from "../lib/utils";
 
 const prisma = new PrismaClient();
@@ -20,10 +22,13 @@ type SeedSite = {
   coverImageUrl?: string;
   likes?: number;
   views?: number;
+  publishedAt?: string;
   tags: string[];
 };
 
 type CarrotEntry = (typeof carrotSnapshot.entries)[number];
+type DesignEntry = (typeof designSnapshot.entries)[number];
+type FrontendRepo = (typeof frontendSnapshot.repos)[number];
 type CarrotCategoryConfig = SeedCategory & {
   sectionTag: string;
 };
@@ -39,6 +44,12 @@ const categories: SeedCategory[] = [
     name: "AI Agent 自动化",
     slug: "ai-agent-automation",
     description: "Agent 编排、自动化平台与智能工作流",
+    style: "CARD",
+  },
+  {
+    name: "AI 镜像与聚合",
+    slug: "ai-chat-mirrors",
+    description: "镜像站、聚合入口与多模型一站式对话服务",
     style: "CARD",
   },
   {
@@ -677,6 +688,21 @@ const carrotCategoryMap: Record<string, CarrotCategoryConfig> = {
   },
 };
 
+const carrotCategoryTagMap: Record<string, string> = {
+  "ai-chat-search": "对话",
+  "ai-chat-mirrors": "镜像聚合",
+  "ai-agent-automation": "Agent",
+  "ai-coding-dev": "编程",
+  "ai-image-video": "绘画",
+  "ai-model-platform": "模型",
+  "ai-office-productivity": "办公",
+  "ai-applications": "应用",
+};
+
+function hasKeyword(text: string, keywords: string[]) {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
 function sanitizeUnicode(value: string) {
   return [...value].filter((char) => {
     const codePoint = char.codePointAt(0);
@@ -702,6 +728,26 @@ function cleanSiteUrl(rawUrl: string) {
 
 function normalizeUrlKey(rawUrl: string) {
   return cleanSiteUrl(rawUrl).toLowerCase();
+}
+
+function normalizeTitleKey(rawTitle: string) {
+  return sanitizeUnicode(rawTitle)
+    .replace(/\(github\)/gi, "")
+    .replace(/github/gi, "")
+    .replace(/[^\u4e00-\u9fa5a-z0-9]+/gi, "")
+    .toLowerCase();
+}
+
+function isGitHubUrl(rawUrl: string) {
+  return /github\.com/i.test(rawUrl);
+}
+
+function isPoorCoverUrl(rawUrl?: string | null) {
+  if (!rawUrl) {
+    return true;
+  }
+
+  return /ai55\.cc|site-icons|favicon|\.ico(?:$|\?)/i.test(rawUrl);
 }
 
 function cleanCarrotDescription(text: string) {
@@ -738,18 +784,88 @@ function getStatusTags(entry: CarrotEntry, hotRank?: number) {
   return tags;
 }
 
-function getCarrotViews(section: string, rank: number, hotRank?: number) {
+function resolveCarrotCategory(entry: CarrotEntry) {
+  const mappedCategory = carrotCategoryMap[entry.section];
+  if (!mappedCategory) {
+    return null;
+  }
+
+  if (entry.section !== "对话") {
+    return mappedCategory;
+  }
+
+  const text = `${entry.title} ${entry.description}`.toLowerCase();
+
+  if (
+    hasKeyword(text, [
+      "镜像",
+      "聚合",
+      "免登录",
+      "无需登录",
+      "共享",
+      "多号池",
+      "免费gpt",
+      "chatgpt web",
+      "gratis",
+      "临时",
+      "聚合站",
+      "无需代理",
+      "无需注册",
+      "永久免费",
+      "国内可用",
+      "主流镜像",
+    ])
+  ) {
+    return {
+      ...mappedCategory,
+      name: "AI 镜像与聚合",
+      slug: "ai-chat-mirrors",
+      description: "镜像站、聚合入口与多模型一站式对话服务",
+      style: "CARD",
+      sectionTag: "镜像聚合",
+    } satisfies CarrotCategoryConfig;
+  }
+
+  if (hasKeyword(text, ["论文", "写作", "简历", "ppt", "文案", "第二大脑", "笔记", "办公", "总结"])) {
+    return carrotCategoryMap.办公;
+  }
+
+  if (hasKeyword(text, ["api", "开发", "代码", "编程", "cli", "sdk", "开发者"])) {
+    return carrotCategoryMap.编程;
+  }
+
+  if (hasKeyword(text, ["绘画", "图像", "视频", "作画", "生图", "生成图片", "cogvideox"])) {
+    return carrotCategoryMap.绘画;
+  }
+
+  if (hasKeyword(text, ["平台", "工作台", "工作流", "rag", "showdoc", "知识库", "智能体"])) {
+    return carrotCategoryMap.应用;
+  }
+
+  if (hasKeyword(text, ["模型", "coze", "扣子", "提示词", "prompt"])) {
+    return carrotCategoryMap.模型;
+  }
+
+  if (hasKeyword(text, ["搜索", "调研", "研究", "问答"])) {
+    return carrotCategoryMap.对话;
+  }
+
+  return mappedCategory;
+}
+
+function getCarrotViews(categorySlug: string, rank: number, hotRank?: number) {
   const sectionBaseMap: Record<string, number> = {
-    Agent: 72000,
-    对话: 64000,
-    绘画: 43000,
-    模型: 52000,
-    办公: 36000,
-    编程: 61000,
-    应用: 39000,
+    "ai-agent-automation": 72000,
+    "ai-chat-search": 64000,
+    "ai-chat-mirrors": 60000,
+    "ai-image-video": 43000,
+    "ai-model-platform": 52000,
+    "ai-office-productivity": 36000,
+    "ai-coding-dev": 61000,
+    "ai-applications": 39000,
   };
 
-  const sectionBase = sectionBaseMap[section] ?? 32000;
+  const sectionBase = sectionBaseMap[categorySlug] ?? 32000;
   const rankScore = Math.max(1800, 14000 - rank * 110);
   const hotBonus = hotRank ? Math.max(0, 160000 - hotRank * 9000) : 0;
   return sectionBase + rankScore + hotBonus;
@@ -774,8 +890,36 @@ function prefersIncomingDescription(current: string, incoming: string) {
   return incoming.length > current.length && !incoming.includes("…") && !incoming.includes("...");
 }
 
+function mergeSiteData(existing: SeedSite, incoming: SeedSite) {
+  existing.likes = Math.max(existing.likes ?? 0, incoming.likes ?? 0);
+  existing.views = Math.max(existing.views ?? 0, incoming.views ?? 0);
+
+  if ((!existing.coverImageUrl || isPoorCoverUrl(existing.coverImageUrl)) && incoming.coverImageUrl) {
+    existing.coverImageUrl = incoming.coverImageUrl;
+  }
+
+  if (isGitHubUrl(existing.url) && !isGitHubUrl(incoming.url)) {
+    existing.url = cleanSiteUrl(incoming.url);
+  }
+
+  if (/\(github\)/i.test(existing.title) && !/\(github\)/i.test(incoming.title)) {
+    existing.title = incoming.title;
+  }
+
+  if (!existing.publishedAt || (incoming.publishedAt && new Date(incoming.publishedAt) > new Date(existing.publishedAt))) {
+    existing.publishedAt = incoming.publishedAt;
+  }
+
+  existing.tags = normalizeTagList([...existing.tags, ...incoming.tags]);
+
+  if (prefersIncomingDescription(existing.description, incoming.description)) {
+    existing.description = incoming.description;
+  }
+}
+
 function buildCarrotSites() {
   const hotRankMap = new Map<string, number>();
+  const fetchedBase = new Date(carrotSnapshot.fetchedAt).getTime();
   for (const entry of carrotSnapshot.entries) {
     if (entry.section !== "热门" || !entry.rank) {
       continue;
@@ -790,7 +934,7 @@ function buildCarrotSites() {
       continue;
     }
 
-    const mappedCategory = carrotCategoryMap[entry.section];
+    const mappedCategory = resolveCarrotCategory(entry);
     if (!mappedCategory) {
       continue;
     }
@@ -800,12 +944,16 @@ function buildCarrotSites() {
     const title = sanitizeUnicode(entry.title.trim());
     const description = cleanCarrotDescription(entry.description);
     const tags = normalizeTagList([
-      mappedCategory.sectionTag,
+      carrotCategoryTagMap[mappedCategory.slug] ?? mappedCategory.sectionTag,
       "Carrot",
+      entry.section,
       ...getStatusTags(entry, hotRank),
     ]).map((tag) => sanitizeUnicode(tag));
-    const views = getCarrotViews(entry.section, entry.rank, hotRank);
+    const views = getCarrotViews(mappedCategory.slug, entry.rank, hotRank);
     const likes = getCarrotLikes(views, entry.rank, hotRank);
+    const publishedAt = new Date(
+      fetchedBase - (entry.rank * 6 + (hotRank ?? 0) * 2) * 60 * 60 * 1000,
+    ).toISOString();
 
     const nextSite: SeedSite = {
       categorySlug: mappedCategory.slug,
@@ -815,6 +963,7 @@ function buildCarrotSites() {
       coverImageUrl: entry.coverImageUrl || undefined,
       likes,
       views,
+      publishedAt,
       tags,
     };
 
@@ -826,7 +975,13 @@ function buildCarrotSites() {
 
     existing.likes = Math.max(existing.likes ?? 0, likes);
     existing.views = Math.max(existing.views ?? 0, views);
-    existing.coverImageUrl = existing.coverImageUrl || nextSite.coverImageUrl;
+    existing.publishedAt =
+      existing.publishedAt && new Date(existing.publishedAt) > new Date(publishedAt)
+        ? existing.publishedAt
+        : publishedAt;
+    if ((isPoorCoverUrl(existing.coverImageUrl) || !existing.coverImageUrl) && nextSite.coverImageUrl) {
+      existing.coverImageUrl = nextSite.coverImageUrl;
+    }
     existing.tags = normalizeTagList([...existing.tags, ...nextSite.tags]);
 
     if (prefersIncomingDescription(existing.description, nextSite.description)) {
@@ -837,44 +992,110 @@ function buildCarrotSites() {
   return [...siteMap.values()];
 }
 
+function buildFrontendSites() {
+  return frontendSnapshot.repos.map((repo: FrontendRepo) => ({
+    categorySlug: "frontend-dev",
+    title: repo.title,
+    description: repo.description,
+    url: repo.url,
+    coverImageUrl: repo.coverImageUrl,
+    likes: Math.max(46, Math.round(repo.stars / 1250)),
+    views: repo.stars,
+    publishedAt: repo.pushedAt,
+    tags: normalizeTagList([...repo.tags, "GitHub", "开源", "热门"]),
+  }));
+}
+
+function buildDesignSites() {
+  return designSnapshot.entries.map((entry: DesignEntry) => ({
+    categorySlug: "design-inspiration",
+    title: entry.title,
+    description: entry.description,
+    url: entry.url,
+    likes: entry.likes,
+    views: entry.views,
+    publishedAt: entry.publishedAt,
+    tags: normalizeTagList(entry.tags),
+  }));
+}
+
 function mergeSites(primary: SeedSite[], incoming: SeedSite[]) {
   const siteMap = new Map<string, SeedSite>();
+  const aliasMap = new Map<string, string>();
+
+  function registerAlias(site: SeedSite, key: string) {
+    aliasMap.set(`${site.categorySlug}:${normalizeTitleKey(site.title)}`, key);
+  }
 
   for (const site of primary) {
-    siteMap.set(normalizeUrlKey(site.url), {
+    const key = normalizeUrlKey(site.url);
+    const aliasKey = aliasMap.get(`${site.categorySlug}:${normalizeTitleKey(site.title)}`);
+    const nextSite = {
       ...site,
       url: cleanSiteUrl(site.url),
       tags: normalizeTagList(site.tags),
-    });
+    };
+
+    if (siteMap.has(key)) {
+      mergeSiteData(siteMap.get(key)!, nextSite);
+      registerAlias(siteMap.get(key)!, key);
+      continue;
+    }
+
+    if (aliasKey && siteMap.has(aliasKey)) {
+      mergeSiteData(siteMap.get(aliasKey)!, nextSite);
+      registerAlias(siteMap.get(aliasKey)!, aliasKey);
+      continue;
+    }
+
+    siteMap.set(key, nextSite);
+    registerAlias(nextSite, key);
   }
 
   for (const site of incoming) {
     const key = normalizeUrlKey(site.url);
-    const existing = siteMap.get(key);
+    const aliasKey = aliasMap.get(`${site.categorySlug}:${normalizeTitleKey(site.title)}`);
+    const existing = siteMap.get(key) ?? (aliasKey ? siteMap.get(aliasKey) : undefined);
 
     if (!existing) {
-      siteMap.set(key, {
+      const nextSite = {
         ...site,
         url: cleanSiteUrl(site.url),
         tags: normalizeTagList(site.tags),
-      });
+      };
+      siteMap.set(key, nextSite);
+      registerAlias(nextSite, key);
       continue;
     }
 
-    existing.likes = Math.max(existing.likes ?? 0, site.likes ?? 0);
-    existing.views = Math.max(existing.views ?? 0, site.views ?? 0);
-    existing.coverImageUrl = existing.coverImageUrl || site.coverImageUrl;
-    existing.tags = normalizeTagList([...existing.tags, ...site.tags]);
+    mergeSiteData(existing, {
+      ...site,
+      url: cleanSiteUrl(site.url),
+      tags: normalizeTagList(site.tags),
+    });
 
-    if (prefersIncomingDescription(existing.description, site.description)) {
-      existing.description = site.description;
+    if (aliasKey && aliasKey !== key) {
+      siteMap.delete(key);
     }
+
+    registerAlias(existing, normalizeUrlKey(existing.url));
   }
 
   return [...siteMap.values()];
 }
 
-const sites = mergeSites(curatedSites, buildCarrotSites());
+function assignFallbackPublishedAt(siteList: SeedSite[]) {
+  const baseTimestamp = new Date("2026-01-01T00:00:00Z").getTime();
+
+  return siteList.map((site, index) => ({
+    ...site,
+    publishedAt: site.publishedAt ?? new Date(baseTimestamp - index * 60 * 60 * 1000).toISOString(),
+  }));
+}
+
+const sites = assignFallbackPublishedAt(
+  mergeSites(curatedSites, [...buildCarrotSites(), ...buildFrontendSites(), ...buildDesignSites()]),
+);
 
 async function main() {
   await prisma.site.deleteMany();
@@ -918,6 +1139,7 @@ async function main() {
         fallbackColor: getFallbackColor(sanitizeUnicode(site.title)),
         likes: site.likes ?? 0,
         views: site.views ?? 0,
+        publishedAt: site.publishedAt ? new Date(site.publishedAt) : undefined,
         categoryId,
         publisherType: "ADMIN",
         publisherName: "管理员",

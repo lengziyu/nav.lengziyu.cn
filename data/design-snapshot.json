@@ -1,0 +1,114 @@
+{
+  "source": "manual-curation",
+  "fetchedAt": "2026-03-28T14:00:00Z",
+  "entries": [
+    {
+      "title": "Mobbin",
+      "url": "https://mobbin.com",
+      "description": "移动端与 Web 产品界面模式库，适合拆解真实产品流程与细节。",
+      "likes": 138,
+      "views": 18800,
+      "publishedAt": "2026-03-28T14:00:00Z",
+      "tags": ["产品设计", "UI 模式", "案例库"]
+    },
+    {
+      "title": "Awwwards",
+      "url": "https://www.awwwards.com",
+      "description": "全球高质量网站案例与趋势风向标，适合看交互、动效和视觉完成度。",
+      "likes": 132,
+      "views": 18200,
+      "publishedAt": "2026-03-28T13:20:00Z",
+      "tags": ["网站案例", "交互", "动效"]
+    },
+    {
+      "title": "Dribbble",
+      "url": "https://dribbble.com",
+      "description": "顶级设计师作品社区，适合搜配色、插画、品牌视觉和 UI 细节。",
+      "likes": 126,
+      "views": 17400,
+      "publishedAt": "2026-03-28T12:40:00Z",
+      "tags": ["设计", "灵感", "UI"]
+    },
+    {
+      "title": "Behance",
+      "url": "https://www.behance.net",
+      "description": "Adobe 旗下设计作品平台，适合看完整品牌、视觉和交互项目。",
+      "likes": 118,
+      "views": 16800,
+      "publishedAt": "2026-03-28T12:00:00Z",
+      "tags": ["作品集", "视觉", "品牌"]
+    },
+    {
+      "title": "Lapa Ninja",
+      "url": "https://www.lapa.ninja",
+      "description": "大量 landing page 设计案例，适合做营销页和官网参考。",
+      "likes": 114,
+      "views": 16000,
+      "publishedAt": "2026-03-28T11:20:00Z",
+      "tags": ["落地页", "营销设计", "官网"]
+    },
+    {
+      "title": "One Page Love",
+      "url": "https://onepagelove.com",
+      "description": "专注单页网站灵感与模板资源，适合做品牌页和活动页对标。",
+      "likes": 106,
+      "views": 15100,
+      "publishedAt": "2026-03-28T10:40:00Z",
+      "tags": ["单页网站", "模板", "品牌页"]
+    },
+    {
+      "title": "Refero",
+      "url": "https://refero.design",
+      "description": "真实 SaaS 产品界面与体验参考库，适合做产品设计和页面拆解。",
+      "likes": 101,
+      "views": 14600,
+      "publishedAt": "2026-03-28T10:00:00Z",
+      "tags": ["SaaS", "产品设计", "参考库"]
+    },
+    {
+      "title": "Collect UI",
+      "url": "https://collectui.com",
+      "description": "持续更新的 UI 灵感集合，适合快速搜局部模块与组件样式。",
+      "likes": 96,
+      "views": 13900,
+      "publishedAt": "2026-03-28T09:20:00Z",
+      "tags": ["组件", "UI", "模块灵感"]
+    },
+    {
+      "title": "Godly",
+      "url": "https://godly.website",
+      "description": "精选创意网站合集，适合寻找大胆排版、视觉节奏和品牌感。",
+      "likes": 92,
+      "views": 13200,
+      "publishedAt": "2026-03-28T08:40:00Z",
+      "tags": ["创意网站", "排版", "视觉风格"]
+    },
+    {
+      "title": "Httpster",
+      "url": "https://httpster.net",
+      "description": "偏现代与实验感的网站灵感库，适合找网页布局和视觉趋势。",
+      "likes": 88,
+      "views": 12600,
+      "publishedAt": "2026-03-28T08:00:00Z",
+      "tags": ["网站灵感", "布局", "趋势"]
+    },
+    {
+      "title": "Minimal Gallery",
+      "url": "https://minimal.gallery",
+      "description": "极简网站灵感库，适合看留白、版式和克制的品牌表达。",
+      "likes": 82,
+      "views": 11900,
+      "publishedAt": "2026-03-28T07:20:00Z",
+      "tags": ["极简", "版式", "品牌"]
+    },
+    {
+      "title": "Layers",
+      "url": "https://layers.to",
+      "description": "面向现代产品设计与展示的灵感集合，适合看高完成度界面呈现。",
+      "likes": 77,
+      "views": 11200,
+      "publishedAt": "2026-03-28T06:40:00Z",
+      "tags": ["产品展示", "界面", "现代设计"]
+    }
+  ]
+}

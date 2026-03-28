@@ -11,7 +11,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "carrot:sync": "node scripts/update-carrot-snapshot.mjs"
+    "carrot:sync": "node scripts/update-carrot-snapshot.mjs",
+    "frontend:sync": "node scripts/update-frontend-snapshot.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
@@ -35,8 +36,5 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

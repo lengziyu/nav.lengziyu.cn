@@ -1,0 +1,201 @@
+{
+  "source": "https://api.github.com",
+  "fetchedAt": "2026-03-28T13:47:28.019Z",
+  "repos": [
+    {
+      "title": "Next.js",
+      "repo": "vercel/next.js",
+      "url": "https://nextjs.org",
+      "sourceUrl": "https://github.com/vercel/next.js",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/vercel/next.js",
+      "description": "React 全栈框架，App Router、SSR 与边缘渲染生态成熟。",
+      "stars": 138509,
+      "pushedAt": "2026-03-28T13:41:34Z",
+      "tags": [
+        "React",
+        "全栈框架",
+        "SSR"
+      ]
+    },
+    {
+      "title": "React",
+      "repo": "facebook/react",
+      "url": "https://react.dev",
+      "sourceUrl": "https://github.com/facebook/react",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/facebook/react",
+      "description": "组件驱动 UI 基础设施，社区最活跃的前端生态之一。",
+      "stars": 244238,
+      "pushedAt": "2026-03-28T09:07:01Z",
+      "tags": [
+        "组件",
+        "UI",
+        "生态"
+      ]
+    },
+    {
+      "title": "Vue",
+      "repo": "vuejs/core",
+      "url": "https://vuejs.org",
+      "sourceUrl": "https://github.com/vuejs/core",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/vuejs/core",
+      "description": "渐进式前端框架，适合中后台、内容型应用与组件化开发。",
+      "stars": 53342,
+      "pushedAt": "2026-03-28T01:53:13Z",
+      "tags": [
+        "框架",
+        "渐进式",
+        "组件化"
+      ]
+    },
+    {
+      "title": "Vite",
+      "repo": "vitejs/vite",
+      "url": "https://vite.dev",
+      "sourceUrl": "https://github.com/vitejs/vite",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/vitejs/vite",
+      "description": "下一代前端构建工具，冷启动与热更新体验非常强。",
+      "stars": 79391,
+      "pushedAt": "2026-03-28T12:22:17Z",
+      "tags": [
+        "构建工具",
+        "开发体验",
+        "工程化"
+      ]
+    },
+    {
+      "title": "Tailwind CSS",
+      "repo": "tailwindlabs/tailwindcss",
+      "url": "https://tailwindcss.com",
+      "sourceUrl": "https://github.com/tailwindlabs/tailwindcss",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/tailwindlabs/tailwindcss",
+      "description": "原子化 CSS 体系，适合快速搭建设计系统和中大型界面。",
+      "stars": 94210,
+      "pushedAt": "2026-03-27T15:53:57Z",
+      "tags": [
+        "CSS",
+        "设计系统",
+        "UI"
+      ]
+    },
+    {
+      "title": "Astro",
+      "repo": "withastro/astro",
+      "url": "https://astro.build",
+      "sourceUrl": "https://github.com/withastro/astro",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/withastro/astro",
+      "description": "内容驱动网站框架，适合博客、官网与营销页性能优化。",
+      "stars": 57930,
+      "pushedAt": "2026-03-27T20:21:21Z",
+      "tags": [
+        "静态站点",
+        "内容站",
+        "性能"
+      ]
+    },
+    {
+      "title": "Nuxt",
+      "repo": "nuxt/nuxt",
+      "url": "https://nuxt.com",
+      "sourceUrl": "https://github.com/nuxt/nuxt",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/nuxt/nuxt",
+      "description": "Vue 生态的全栈框架，适合服务端渲染与内容应用。",
+      "stars": 59919,
+      "pushedAt": "2026-03-28T03:54:08Z",
+      "tags": [
+        "Vue",
+        "全栈框架",
+        "SSR"
+      ]
+    },
+    {
+      "title": "Storybook",
+      "repo": "storybookjs/storybook",
+      "url": "https://storybook.js.org",
+      "sourceUrl": "https://github.com/storybookjs/storybook",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/storybookjs/storybook",
+      "description": "组件开发与文档工作台，适合设计系统和 UI 测试流程。",
+      "stars": 89554,
+      "pushedAt": "2026-03-28T04:16:18Z",
+      "tags": [
+        "组件库",
+        "文档",
+        "测试"
+      ]
+    },
+    {
+      "title": "shadcn/ui",
+      "repo": "shadcn-ui/ui",
+      "url": "https://ui.shadcn.com",
+      "sourceUrl": "https://github.com/shadcn-ui/ui",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/shadcn-ui/ui",
+      "description": "开源组件与代码分发平台，适合快速组装现代 React 界面。",
+      "stars": 110930,
+      "pushedAt": "2026-03-28T13:05:03Z",
+      "tags": [
+        "组件",
+        "React",
+        "UI"
+      ]
+    },
+    {
+      "title": "TanStack Query",
+      "repo": "TanStack/query",
+      "url": "https://tanstack.com/query",
+      "sourceUrl": "https://github.com/TanStack/query",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/TanStack/query",
+      "description": "服务端状态与异步数据管理利器，React/Vue/Svelte 都能用。",
+      "stars": 48942,
+      "pushedAt": "2026-03-28T13:25:37Z",
+      "tags": [
+        "状态管理",
+        "数据请求",
+        "跨框架"
+      ]
+    },
+    {
+      "title": "Rspack",
+      "repo": "web-infra-dev/rspack",
+      "url": "https://rspack.rs",
+      "sourceUrl": "https://github.com/web-infra-dev/rspack",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/web-infra-dev/rspack",
+      "description": "Rust 驱动的现代打包器，兼顾 webpack 生态兼容与速度。",
+      "stars": 12588,
+      "pushedAt": "2026-03-28T09:06:27Z",
+      "tags": [
+        "打包器",
+        "Rust",
+        "工程化"
+      ]
+    },
+    {
+      "title": "UnoCSS",
+      "repo": "unocss/unocss",
+      "url": "https://unocss.dev",
+      "sourceUrl": "https://github.com/unocss/unocss",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/unocss/unocss",
+      "description": "按需原子化 CSS 引擎，适合追求极致灵活度的样式体系。",
+      "stars": 18718,
+      "pushedAt": "2026-03-21T07:36:07Z",
+      "tags": [
+        "CSS",
+        "原子化",
+        "样式引擎"
+      ]
+    },
+    {
+      "title": "SvelteKit",
+      "repo": "sveltejs/kit",
+      "url": "https://svelte.dev/docs/kit",
+      "sourceUrl": "https://github.com/sveltejs/kit",
+      "coverImageUrl": "https://opengraph.githubassets.com/1/sveltejs/kit",
+      "description": "Svelte 官方应用框架，适合追求轻量和高性能的 Web 项目。",
+      "stars": 20394,
+      "pushedAt": "2026-03-28T12:57:40Z",
+      "tags": [
+        "Svelte",
+        "应用框架",
+        "性能"
+      ]
+    }
+  ]
+}

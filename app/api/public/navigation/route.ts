@@ -41,6 +41,7 @@ export async function GET() {
       fallbackColor: site.fallbackColor ?? getFallbackColor(site.title),
       likes: site.likes,
       views: site.views,
+      publishedAt: site.publishedAt.toISOString(),
       publisherName: site.publisherName,
       publisherType: site.publisherType,
       tags: site.tags,
