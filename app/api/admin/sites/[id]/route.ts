@@ -69,3 +69,24 @@ export async function PATCH(
     return NextResponse.json({ message: "站点不存在" }, { status: 404 });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!isAdminRequest(request)) {
+    return NextResponse.json({ message: "未登录" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    await prisma.site.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ message: "站点不存在" }, { status: 404 });
+  }
+}

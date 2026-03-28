@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
+import ThemeToggle from "@/components/theme-toggle";
+
 type PublicTag = {
   id: string;
   name: string;
@@ -76,6 +78,14 @@ function getTagToneClass(tag: string) {
   }
 
   return tones[Math.abs(hash) % tones.length];
+}
+
+function isCompactLogoCover(url: string | null) {
+  if (!url) {
+    return false;
+  }
+
+  return /site-icons|favicon|\.ico(?:$|\?)/i.test(url);
 }
 
 export default function NavigationApp() {
@@ -223,6 +233,7 @@ export default function NavigationApp() {
         </Link>
 
         <div className="nav-header-actions">
+          <ThemeToggle />
           <button type="button" className="recommend-btn" onClick={() => setShowRecommendModal(true)}>
             推荐网站
           </button>
@@ -260,6 +271,7 @@ export default function NavigationApp() {
           <div className="content-head">
             <h2>{activeCategory?.name ?? "导航"}</h2>
             <p>{activeCategory?.description ?? "按分类浏览推荐网站"}</p>
+            <div className="content-head-badge">当前分类按热门排序</div>
           </div>
 
           {error ? <div className="error-box">{error}</div> : null}
@@ -270,7 +282,10 @@ export default function NavigationApp() {
             <div className="site-list-wrap">
               {activeCategory.sites.map((site) => (
                 <article key={site.id} className="site-list-item" onClick={() => void onOpenSite(site)}>
-                  <div className="site-list-cover" style={{ background: site.fallbackColor }}>
+                  <div
+                    className={`site-list-cover ${isCompactLogoCover(site.coverImageUrl) ? "logo-mode" : ""}`}
+                    style={{ background: site.fallbackColor }}
+                  >
                     {site.coverImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={site.coverImageUrl} alt={site.title} />
@@ -428,6 +443,7 @@ function SiteCard({
 }) {
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
   const [liftOnHover, setLiftOnHover] = useState(false);
+  const compactCover = isCompactLogoCover(site.coverImageUrl);
 
   useEffect(() => {
     const checkCanLift = () => {
@@ -452,7 +468,7 @@ function SiteCard({
 
   return (
     <article className={`site-card ${liftOnHover ? "can-lift" : ""}`} onClick={() => void onOpenSite(site)}>
-      <div className="site-card-cover" style={{ background: site.fallbackColor }}>
+      <div className={`site-card-cover ${compactCover ? "logo-mode" : ""}`} style={{ background: site.fallbackColor }}>
         {site.coverImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={site.coverImageUrl} alt={site.title} />

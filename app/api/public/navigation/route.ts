@@ -12,7 +12,7 @@ export async function GET() {
     include: {
       sites: {
         where: { status: "APPROVED" },
-        orderBy: [{ publishedAt: "desc" }],
+        orderBy: [{ views: "desc" }, { likes: "desc" }, { publishedAt: "desc" }],
         include: {
           tags: {
             select: {

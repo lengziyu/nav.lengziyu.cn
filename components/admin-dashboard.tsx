@@ -17,6 +17,8 @@ import {
   YAxis,
 } from "recharts";
 
+import ThemeToggle from "@/components/theme-toggle";
+
 type CategoryStyle = "CARD" | "LIST";
 type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminMenuKey = "overview" | "categories" | "publish" | "githubBatch" | "review";
@@ -973,6 +975,24 @@ export default function AdminDashboard() {
     router.replace("/admin/login");
   }
 
+  async function onDeleteSite(site: AdminSite) {
+    setMessage("");
+
+    if (!window.confirm(`确认删除《${site.title}》吗？`)) {
+      return;
+    }
+
+    try {
+      await fetchJson<{ ok: boolean }>(`/api/admin/sites/${site.id}`, {
+        method: "DELETE",
+      });
+      setMessage("站点已删除");
+      await refreshData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "站点删除失败");
+    }
+  }
+
   return (
     <div className="admin-shell">
       {message ? <div className="admin-toast">{message}</div> : null}
@@ -987,6 +1007,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-topbar-actions">
+          <ThemeToggle />
           <Link href="/" target="_blank" rel="noreferrer">
             返回前端
           </Link>
@@ -1228,10 +1249,21 @@ export default function AdminDashboard() {
                     <div key={site.id} className="site-table-row site-table-row-edit">
                       <strong>{site.title}</strong>
                       <span>{site.category.name}</span>
+                      <span className="site-table-hotness">热度 {site.views} 浏览 / {site.likes} 点赞</span>
                       <span>{site.tags.map((tag) => tag.name).join(" / ") || "-"}</span>
-                      <button type="button" className="btn-ghost" onClick={() => onPickEditSite(site)}>
-                        编辑
-                      </button>
+                      <div className="site-table-actions">
+                        <button type="button" className="btn-ghost" onClick={() => onPickEditSite(site)}>
+                          编辑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost category-delete-btn"
+                          onClick={() => void onDeleteSite(site)}
+                        >
+                          <Trash2 size={14} />
+                          删除
+                        </button>
+                      </div>
                     </div>
                   ))}
                   {!loading && filteredPublishSites.length === 0 ? (

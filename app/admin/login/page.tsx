@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import ThemeToggle from "@/components/theme-toggle";
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -39,6 +41,9 @@ export default function AdminLoginPage() {
 
   return (
     <main className="admin-login-page">
+      <div className="admin-login-toolbar">
+        <ThemeToggle />
+      </div>
       <form className="admin-login-card" onSubmit={onSubmit}>
         <div className="admin-login-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}

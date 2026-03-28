@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
-import { getFallbackColor, slugify } from "../lib/utils";
+import carrotSnapshot from "../data/carrot-snapshot.json";
+import { getFallbackColor, normalizeTagList, slugify } from "../lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -22,11 +23,22 @@ type SeedSite = {
   tags: string[];
 };
 
+type CarrotEntry = (typeof carrotSnapshot.entries)[number];
+type CarrotCategoryConfig = SeedCategory & {
+  sectionTag: string;
+};
+
 const categories: SeedCategory[] = [
   {
     name: "AI 对话与搜索",
     slug: "ai-chat-search",
     description: "主流大模型助手、联网搜索与问答工具",
+    style: "CARD",
+  },
+  {
+    name: "AI Agent 自动化",
+    slug: "ai-agent-automation",
+    description: "Agent 编排、自动化平台与智能工作流",
     style: "CARD",
   },
   {
@@ -42,9 +54,21 @@ const categories: SeedCategory[] = [
     style: "CARD",
   },
   {
-    name: "AI Agent 自动化",
-    slug: "ai-agent-automation",
-    description: "Agent 编排、自动化平台与智能工作流",
+    name: "AI 模型与平台",
+    slug: "ai-model-platform",
+    description: "模型入口、平台能力与智能体搭建工具",
+    style: "CARD",
+  },
+  {
+    name: "AI 办公效率",
+    slug: "ai-office-productivity",
+    description: "写作、文档、效率与办公场景 AI 工具",
+    style: "CARD",
+  },
+  {
+    name: "AI 应用与工作台",
+    slug: "ai-applications",
+    description: "行业应用、AI 工作台与一站式工具集合",
     style: "CARD",
   },
   {
@@ -61,7 +85,7 @@ const categories: SeedCategory[] = [
   },
 ];
 
-const sites: SeedSite[] = [
+const curatedSites: SeedSite[] = [
   {
     categorySlug: "ai-chat-search",
     title: "ChatGPT",
@@ -600,6 +624,250 @@ const sites: SeedSite[] = [
     tags: ["创意网站", "排版", "视觉风格"],
   },
 ];
+
+const carrotCategoryMap: Record<string, CarrotCategoryConfig> = {
+  Agent: {
+    name: "AI Agent 自动化",
+    slug: "ai-agent-automation",
+    description: "Agent 编排、自动化平台与智能工作流",
+    style: "CARD",
+    sectionTag: "Agent",
+  },
+  对话: {
+    name: "AI 对话与搜索",
+    slug: "ai-chat-search",
+    description: "主流大模型助手、联网搜索与问答工具",
+    style: "CARD",
+    sectionTag: "对话",
+  },
+  绘画: {
+    name: "AI 图像与视频",
+    slug: "ai-image-video",
+    description: "生成式绘图、视频创作与视觉工作流",
+    style: "CARD",
+    sectionTag: "绘画",
+  },
+  模型: {
+    name: "AI 模型与平台",
+    slug: "ai-model-platform",
+    description: "模型入口、平台能力与智能体搭建工具",
+    style: "CARD",
+    sectionTag: "模型",
+  },
+  办公: {
+    name: "AI 办公效率",
+    slug: "ai-office-productivity",
+    description: "写作、文档、效率与办公场景 AI 工具",
+    style: "CARD",
+    sectionTag: "办公",
+  },
+  编程: {
+    name: "AI 编程开发",
+    slug: "ai-coding-dev",
+    description: "代码补全、AI IDE 与工程效率工具",
+    style: "CARD",
+    sectionTag: "编程",
+  },
+  应用: {
+    name: "AI 应用与工作台",
+    slug: "ai-applications",
+    description: "行业应用、AI 工作台与一站式工具集合",
+    style: "CARD",
+    sectionTag: "应用",
+  },
+};
+
+function cleanSiteUrl(rawUrl: string) {
+  const input = rawUrl.trim();
+  if (!input) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(input);
+    const pathname = parsed.pathname.replace(/\/+$/g, "") || "/";
+    const base = `${parsed.protocol}//${parsed.host}`;
+    return `${base}${pathname === "/" ? "" : pathname}`;
+  } catch {
+    return input;
+  }
+}
+
+function normalizeUrlKey(rawUrl: string) {
+  return cleanSiteUrl(rawUrl).toLowerCase();
+}
+
+function cleanCarrotDescription(text: string) {
+  const cleaned = text
+    .replace(/[🆕⭐😄🔑✈️🌏👍🔥]+/g, " ")
+    .replace(/[|｜]/g, " · ")
+    .replace(/\.\.\.+/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned || "来自 carrot 导航整理的站点。";
+}
+
+function getStatusTags(entry: CarrotEntry, hotRank?: number) {
+  const tags: string[] = [];
+  const sourceText = `${entry.title} ${entry.description}`;
+
+  if (hotRank) {
+    tags.push("热门");
+  }
+  if (/😄|免费/.test(sourceText)) {
+    tags.push("免费");
+  }
+  if (/🔑|密码|登陆|登录/.test(sourceText)) {
+    tags.push("需登录");
+  }
+  if (/✈️|🌏|国际|海外/.test(sourceText)) {
+    tags.push("国际网络");
+  }
+  if (/github\.com/i.test(entry.url)) {
+    tags.push("GitHub", "开源");
+  }
+
+  return tags;
+}
+
+function getCarrotViews(section: string, rank: number, hotRank?: number) {
+  const sectionBaseMap: Record<string, number> = {
+    Agent: 72000,
+    对话: 64000,
+    绘画: 43000,
+    模型: 52000,
+    办公: 36000,
+    编程: 61000,
+    应用: 39000,
+  };
+
+  const sectionBase = sectionBaseMap[section] ?? 32000;
+  const rankScore = Math.max(1800, 14000 - rank * 110);
+  const hotBonus = hotRank ? Math.max(0, 160000 - hotRank * 9000) : 0;
+  return sectionBase + rankScore + hotBonus;
+}
+
+function getCarrotLikes(views: number, rank: number, hotRank?: number) {
+  const rankBonus = Math.max(0, 32 - rank);
+  const hotBonus = hotRank ? Math.max(6, 18 - hotRank * 2) : 0;
+  return Math.max(18, Math.round(views / 1100) + rankBonus + hotBonus);
+}
+
+function prefersIncomingDescription(current: string, incoming: string) {
+  if (!current.trim()) {
+    return true;
+  }
+  if (!incoming.trim()) {
+    return false;
+  }
+  if (current.includes("…") || current.includes("...")) {
+    return !incoming.includes("…") && !incoming.includes("...");
+  }
+  return incoming.length > current.length && !incoming.includes("…") && !incoming.includes("...");
+}
+
+function buildCarrotSites() {
+  const hotRankMap = new Map<string, number>();
+  for (const entry of carrotSnapshot.entries) {
+    if (entry.section !== "热门" || !entry.rank) {
+      continue;
+    }
+    hotRankMap.set(normalizeUrlKey(entry.url), entry.rank);
+  }
+
+  const siteMap = new Map<string, SeedSite>();
+
+  for (const entry of carrotSnapshot.entries) {
+    if (entry.section === "热门" || !entry.rank) {
+      continue;
+    }
+
+    const mappedCategory = carrotCategoryMap[entry.section];
+    if (!mappedCategory) {
+      continue;
+    }
+
+    const key = normalizeUrlKey(entry.url);
+    const hotRank = hotRankMap.get(key);
+    const title = entry.title.trim();
+    const description = cleanCarrotDescription(entry.description);
+    const tags = normalizeTagList([
+      mappedCategory.sectionTag,
+      "Carrot",
+      ...getStatusTags(entry, hotRank),
+    ]);
+    const views = getCarrotViews(entry.section, entry.rank, hotRank);
+    const likes = getCarrotLikes(views, entry.rank, hotRank);
+
+    const nextSite: SeedSite = {
+      categorySlug: mappedCategory.slug,
+      title,
+      description,
+      url: cleanSiteUrl(entry.url),
+      coverImageUrl: entry.coverImageUrl || undefined,
+      likes,
+      views,
+      tags,
+    };
+
+    const existing = siteMap.get(key);
+    if (!existing) {
+      siteMap.set(key, nextSite);
+      continue;
+    }
+
+    existing.likes = Math.max(existing.likes ?? 0, likes);
+    existing.views = Math.max(existing.views ?? 0, views);
+    existing.coverImageUrl = existing.coverImageUrl || nextSite.coverImageUrl;
+    existing.tags = normalizeTagList([...existing.tags, ...nextSite.tags]);
+
+    if (prefersIncomingDescription(existing.description, nextSite.description)) {
+      existing.description = nextSite.description;
+    }
+  }
+
+  return [...siteMap.values()];
+}
+
+function mergeSites(primary: SeedSite[], incoming: SeedSite[]) {
+  const siteMap = new Map<string, SeedSite>();
+
+  for (const site of primary) {
+    siteMap.set(normalizeUrlKey(site.url), {
+      ...site,
+      url: cleanSiteUrl(site.url),
+      tags: normalizeTagList(site.tags),
+    });
+  }
+
+  for (const site of incoming) {
+    const key = normalizeUrlKey(site.url);
+    const existing = siteMap.get(key);
+
+    if (!existing) {
+      siteMap.set(key, {
+        ...site,
+        url: cleanSiteUrl(site.url),
+        tags: normalizeTagList(site.tags),
+      });
+      continue;
+    }
+
+    existing.likes = Math.max(existing.likes ?? 0, site.likes ?? 0);
+    existing.views = Math.max(existing.views ?? 0, site.views ?? 0);
+    existing.coverImageUrl = existing.coverImageUrl || site.coverImageUrl;
+    existing.tags = normalizeTagList([...existing.tags, ...site.tags]);
+
+    if (prefersIncomingDescription(existing.description, site.description)) {
+      existing.description = site.description;
+    }
+  }
+
+  return [...siteMap.values()];
+}
+
+const sites = mergeSites(curatedSites, buildCarrotSites());
 
 async function main() {
   await prisma.site.deleteMany();

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   const sites = await prisma.site.findMany({
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: [{ views: "desc" }, { likes: "desc" }, { updatedAt: "desc" }],
     include: {
       category: {
         select: {
