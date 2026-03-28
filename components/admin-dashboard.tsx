@@ -1053,10 +1053,10 @@ export default function AdminDashboard() {
       <header className="admin-topbar">
         <div className="admin-topbar-left">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ai-nav-logo.svg" alt="AI 导航" />
+          <img src="/ai-nav-logo.svg" alt="AI 前沿导航" />
           <div>
-            <strong>AI 导航管理后台</strong>
-            <small>Navigation Control Panel</small>
+            <strong>AI 前沿导航后台</strong>
+            <small>Frontier Navigation Console</small>
           </div>
         </div>
 

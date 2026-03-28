@@ -16,8 +16,13 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "AI 与前端导航",
-  description: "支持投稿审核和后台管理的开源导航站",
+  title: "AI 前沿导航",
+  description: "聚焦最新模型、Agent、工具与前沿趋势的 AI 技术导航站",
+  icons: {
+    icon: "/ai-nav-logo.svg",
+    shortcut: "/ai-nav-logo.svg",
+    apple: "/ai-nav-logo.svg",
+  },
 };
 
 const themeBootScript = `

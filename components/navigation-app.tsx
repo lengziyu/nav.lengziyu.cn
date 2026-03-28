@@ -2,7 +2,7 @@
 
 import { CSSProperties, FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Heart, Search } from "lucide-react";
+import { ExternalLink, Eye, Heart, Search } from "lucide-react";
 
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -60,6 +60,19 @@ const initialForm: RecommendForm = {
   tags: "",
   contact: "",
 };
+
+const EXTERNAL_LINKS = [
+  {
+    name: "lengziyu",
+    href: "https://lengziyu.cn",
+    desc: "个人站与项目记录",
+  },
+  {
+    name: "Envra",
+    href: "https://envra.lengziyu.cn",
+    desc: "AI 应用与实验入口",
+  },
+];
 
 type SortMode = "hot" | "latest";
 
@@ -345,12 +358,12 @@ export default function NavigationApp() {
   return (
     <div className="nav-page">
       <header className="nav-header">
-        <Link href="/" className="brand-wrap" aria-label="AI 导航主页">
+        <Link href="/" className="brand-wrap" aria-label="AI 前沿导航主页">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ai-nav-logo.svg" alt="AI 导航 Logo" />
+          <img src="/ai-nav-logo.svg" alt="AI 前沿导航 Logo" />
           <div>
-            <h1>AI 与前端导航</h1>
-            <p>Tools Directory</p>
+            <h1>AI 前沿导航</h1>
+            <p>Frontier Tech Radar</p>
           </div>
         </Link>
 
@@ -381,26 +394,45 @@ export default function NavigationApp() {
 
       <section className="nav-body">
         <aside className="category-panel">
-          <div className="panel-title">分类目录</div>
-          {showSkeleton && categories.length === 0 ? (
-            <SidebarSkeleton />
-          ) : (
-            categories.map((category) => {
-              const active = category.id === activeCategory?.id;
+          <div className="category-scroll-area">
+            {showSkeleton && categories.length === 0 ? (
+              <SidebarSkeleton />
+            ) : (
+              categories.map((category) => {
+                const active = category.id === activeCategory?.id;
 
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  className={`category-item ${active ? "active" : ""}`}
-                  onClick={() => onSwitchCategory(category.id)}
-                >
-                  <span>{category.name}</span>
-                  <small>{category.sites.length}</small>
-                </button>
-              );
-            })
-          )}
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className={`category-item ${active ? "active" : ""}`}
+                    onClick={() => onSwitchCategory(category.id)}
+                  >
+                    <span>{category.name}</span>
+                    <small>{category.sites.length}</small>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <div className="sidebar-link-group">
+            {EXTERNAL_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="sidebar-link-card"
+              >
+                <div>
+                  <strong>{link.name}</strong>
+                  <small>{link.desc}</small>
+                </div>
+                <ExternalLink size={15} />
+              </a>
+            ))}
+          </div>
         </aside>
 
         <main className="content-panel">

@@ -47,13 +47,13 @@ export default function AdminLoginPage() {
       <form className="admin-login-card" onSubmit={onSubmit}>
         <div className="admin-login-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ai-nav-logo.svg" alt="AI 导航" />
+          <img src="/ai-nav-logo.svg" alt="AI 前沿导航" />
           <div>
             <div className="admin-login-eyebrow">Login</div>
             <h1>后台登录</h1>
           </div>
         </div>
-        <p>欢迎回来，请输入管理密码继续。</p>
+        <p>欢迎来到 AI 前沿导航，请输入管理密码继续。</p>
         <label className="admin-login-label" htmlFor="admin-password">
           管理密码
         </label>
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
         </button>
         <div className="admin-login-links">
           <Link href="/" className="admin-login-back">
-            返回前端首页
+            返回 AI 前沿导航
           </Link>
         </div>
       </form>
