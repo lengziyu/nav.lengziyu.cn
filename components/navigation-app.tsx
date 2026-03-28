@@ -2,7 +2,7 @@
 
 import { CSSProperties, FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Eye, Heart, Search } from "lucide-react";
+import { Eye, Heart, Search } from "lucide-react";
 
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -65,12 +65,10 @@ const EXTERNAL_LINKS = [
   {
     name: "lengziyu",
     href: "https://lengziyu.cn",
-    desc: "个人站与项目记录",
   },
   {
     name: "Envra",
     href: "https://envra.lengziyu.cn",
-    desc: "AI 应用与实验入口",
   },
 ];
 
@@ -417,20 +415,13 @@ export default function NavigationApp() {
           </div>
 
           <div className="sidebar-link-group">
-            {EXTERNAL_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="sidebar-link-card"
-              >
-                <div>
-                  <strong>{link.name}</strong>
-                  <small>{link.desc}</small>
-                </div>
-                <ExternalLink size={15} />
-              </a>
+            {EXTERNAL_LINKS.map((link, index) => (
+              <span key={link.href} className="sidebar-link-inline">
+                {index > 0 ? <i aria-hidden="true" /> : null}
+                <a href={link.href} target="_blank" rel="noreferrer">
+                  {link.name}
+                </a>
+              </span>
             ))}
           </div>
         </aside>

@@ -433,45 +433,36 @@ a {
 }
 
 .sidebar-link-group {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-.sidebar-link-card {
-  display: flex;
+.sidebar-link-inline {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--panel-soft) 82%, white 18%) 0%, color-mix(in srgb, var(--panel) 92%, white 8%) 100%);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.sidebar-link-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--brand-blue) 38%, var(--line));
-  box-shadow: 0 10px 22px rgba(32, 135, 244, 0.12);
+.sidebar-link-inline i {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-sub) 72%, transparent);
 }
 
-.sidebar-link-card strong {
-  display: block;
-  font-size: 14px;
-}
-
-.sidebar-link-card small {
-  display: block;
-  margin-top: 2px;
+.sidebar-link-inline a {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-sub);
-  font-size: 12px;
+  transition: color 0.2s ease;
 }
 
-.sidebar-link-card svg {
-  flex-shrink: 0;
+.sidebar-link-inline a:hover {
   color: var(--brand-blue);
 }
 
@@ -1523,9 +1514,10 @@ a {
   min-width: 190px;
 }
 
-.admin-site-toolbar-actions input,
 .admin-site-toolbar-actions select {
   min-width: 180px;
+  flex: 0 0 200px;
+  border: 1px solid var(--line-strong);
   border-radius: 10px;
   padding: 9px 10px;
   font-size: 14px;
@@ -1534,9 +1526,9 @@ a {
   color: var(--text-main);
 }
 
-.admin-site-toolbar-actions select {
-  flex: 0 0 200px;
-  border: 1px solid var(--line-strong);
+.admin-site-toolbar-actions input {
+  min-width: 180px;
+  padding-left: 50px;
 }
 
 .chart-card {
@@ -2287,10 +2279,8 @@ html[data-theme="dark"] .sidebar-link-group {
   border-top-color: #22314a;
 }
 
-html[data-theme="dark"] .sidebar-link-card {
-  border-color: #22314a;
-  background:
-    linear-gradient(135deg, rgba(16, 28, 46, 0.98) 0%, rgba(12, 22, 38, 0.96) 100%);
+html[data-theme="dark"] .sidebar-link-inline i {
+  background: color-mix(in srgb, var(--text-sub) 86%, transparent);
 }
 
 @media (max-width: 1300px) {
