@@ -12,6 +12,11 @@ enum CategoryStyle {
   LIST
 }
 
+enum CategorySortMode {
+  HOT
+  LATEST
+}
+
 enum PublisherType {
   ADMIN
   GUEST
@@ -34,6 +39,7 @@ model Category {
   slug        String        @unique
   description String?
   style       CategoryStyle @default(CARD)
+  defaultSort CategorySortMode @default(HOT)
   sortOrder   Int           @default(0)
   isPublished Boolean       @default(true)
   createdAt   DateTime      @default(now())

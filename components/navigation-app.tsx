@@ -32,6 +32,7 @@ type PublicCategory = {
   name: string;
   slug: string;
   style: "CARD" | "LIST";
+  defaultSort: "HOT" | "LATEST";
   description: string | null;
   sites: PublicSite[];
 };
@@ -155,6 +156,14 @@ export default function NavigationApp() {
   const activeCategory = useMemo(() => {
     return categories.find((category) => category.id === activeCategoryId) ?? categories[0] ?? null;
   }, [activeCategoryId, categories]);
+
+  useEffect(() => {
+    if (!activeCategory) {
+      return;
+    }
+
+    setSortMode(activeCategory.defaultSort === "LATEST" ? "latest" : "hot");
+  }, [activeCategory]);
 
   const activeSites = useMemo(() => {
     if (!activeCategory) {
@@ -579,6 +588,16 @@ function SiteCover({ site, mode }: { site: PublicSite; mode: "card" | "list" }) 
   if (generated) {
     return (
       <div className={`${className} generated-cover`} style={getGeneratedCoverStyle(site)}>
+        {site.coverImageUrl ? (
+          <div className="generated-cover-badge">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={site.coverImageUrl} alt={site.title} />
+          </div>
+        ) : (
+          <div className="generated-cover-badge fallback" aria-hidden="true">
+            {site.title.slice(0, 1)}
+          </div>
+        )}
         <div className={`generated-cover-content ${mode}`}>
           <small>{mode === "card" ? "精选推荐" : "导航"}</small>
           <strong>{site.title}</strong>

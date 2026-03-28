@@ -31,6 +31,7 @@ export async function GET() {
     name: category.name,
     slug: category.slug,
     style: category.style,
+    defaultSort: category.defaultSort,
     description: category.description,
     sites: category.sites.map((site) => ({
       id: site.id,

@@ -12,6 +12,7 @@ type SeedCategory = {
   slug: string;
   description: string;
   style: "CARD" | "LIST";
+  defaultSort?: "HOT" | "LATEST";
 };
 
 type SeedSite = {
@@ -39,60 +40,70 @@ const categories: SeedCategory[] = [
     slug: "ai-chat-search",
     description: "主流大模型助手、联网搜索与问答工具",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI Agent 自动化",
     slug: "ai-agent-automation",
     description: "Agent 编排、自动化平台与智能工作流",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI 镜像与聚合",
     slug: "ai-chat-mirrors",
     description: "镜像站、聚合入口与多模型一站式对话服务",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI 编程开发",
     slug: "ai-coding-dev",
     description: "代码补全、AI IDE 与工程效率工具",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI 图像与视频",
     slug: "ai-image-video",
     description: "生成式绘图、视频创作与视觉工作流",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI 模型与平台",
     slug: "ai-model-platform",
     description: "模型入口、平台能力与智能体搭建工具",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "AI 办公效率",
     slug: "ai-office-productivity",
     description: "写作、文档、效率与办公场景 AI 工具",
     style: "CARD",
+    defaultSort: "LATEST",
   },
   {
     name: "AI 应用与工作台",
     slug: "ai-applications",
     description: "行业应用、AI 工作台与一站式工具集合",
     style: "CARD",
+    defaultSort: "LATEST",
   },
   {
     name: "前端开发",
     slug: "frontend-dev",
     description: "框架、组件库、样式与工程化工具",
     style: "CARD",
+    defaultSort: "HOT",
   },
   {
     name: "设计灵感",
     slug: "design-inspiration",
     description: "视觉灵感、交互案例与创意素材",
     style: "LIST",
+    defaultSort: "LATEST",
   },
 ];
 
@@ -1112,6 +1123,7 @@ async function main() {
         slug: category.slug,
         description: category.description,
         style: category.style,
+        defaultSort: category.defaultSort ?? "HOT",
         sortOrder: index,
       },
       select: {

@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       slug: `${slugBase}-${Date.now().toString().slice(-4)}`,
       description: parsed.data.description || null,
       style: parsed.data.style,
+      defaultSort: parsed.data.defaultSort,
       sortOrder: count,
     },
   });

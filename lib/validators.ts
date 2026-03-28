@@ -1,4 +1,4 @@
-import { CategoryStyle, SubmissionStatus } from "@prisma/client";
+import { CategorySortMode, CategoryStyle, SubmissionStatus } from "@prisma/client";
 import { z } from "zod";
 
 const urlSchema = z.url({ message: "请输入正确的网址，例如 https://example.com" });
@@ -23,6 +23,13 @@ export const createCategorySchema = z.object({
   name: z.string().trim().min(2, "分类名至少 2 个字符").max(24, "分类名最多 24 个字符"),
   description: z.string().trim().max(120).optional(),
   style: z.nativeEnum(CategoryStyle),
+  defaultSort: z.nativeEnum(CategorySortMode).default("HOT"),
+});
+
+export const updateCategorySchema = z.object({
+  description: z.string().trim().max(120).optional(),
+  style: z.nativeEnum(CategoryStyle).optional(),
+  defaultSort: z.nativeEnum(CategorySortMode).optional(),
 });
 
 export const createSiteSchema = z.object({

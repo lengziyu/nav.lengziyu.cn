@@ -20,6 +20,7 @@ import {
 import ThemeToggle from "@/components/theme-toggle";
 
 type CategoryStyle = "CARD" | "LIST";
+type CategorySortMode = "HOT" | "LATEST";
 type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminMenuKey = "overview" | "categories" | "publish" | "githubBatch" | "review";
 type AiProvider = "openrouter" | "gemini";
@@ -28,6 +29,7 @@ type AdminCategory = {
   id: string;
   name: string;
   style: CategoryStyle;
+  defaultSort: CategorySortMode;
   description: string | null;
   _count?: {
     sites: number;
@@ -123,6 +125,7 @@ export default function AdminDashboard() {
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
   const [categoryStyle, setCategoryStyle] = useState<CategoryStyle>("CARD");
+  const [categoryDefaultSort, setCategoryDefaultSort] = useState<CategorySortMode>("HOT");
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
@@ -399,12 +402,14 @@ export default function AdminDashboard() {
           name: categoryName,
           description: categoryDescription,
           style: categoryStyle,
+          defaultSort: categoryDefaultSort,
         }),
       });
 
       setCategoryName("");
       setCategoryDescription("");
       setCategoryStyle("CARD");
+      setCategoryDefaultSort("HOT");
       setCategoryModalOpen(false);
       setMessage("分类创建成功");
       await refreshData();
@@ -864,6 +869,24 @@ export default function AdminDashboard() {
     }
   }
 
+  async function onUpdateCategorySort(categoryId: string, defaultSort: CategorySortMode) {
+    setMessage("");
+
+    try {
+      const result = await fetchJson<{ category: AdminCategory }>(`/api/admin/categories/${categoryId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ defaultSort }),
+      });
+
+      setCategories((prev) =>
+        prev.map((item) => (item.id === categoryId ? { ...item, defaultSort: result.category.defaultSort } : item)),
+      );
+      setMessage("分类默认排序已更新");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新分类排序失败");
+    }
+  }
+
   async function onBatchDeleteCategories() {
     setMessage("");
     if (selectedCategoryIds.length === 0) {
@@ -1201,6 +1224,17 @@ export default function AdminDashboard() {
                       <strong>{category.name}</strong>
                       <span>{category.description || "-"}</span>
                       <small>{category.style === "CARD" ? "卡片" : "列表"}</small>
+                      <div className="category-row-sort">
+                        <select
+                          value={category.defaultSort}
+                          onChange={(event) =>
+                            void onUpdateCategorySort(category.id, event.target.value as CategorySortMode)
+                          }
+                        >
+                          <option value="HOT">默认最热</option>
+                          <option value="LATEST">默认最新</option>
+                        </select>
+                      </div>
                       <small>站点 {category._count?.sites ?? 0} / 投稿 {category._count?.submissions ?? 0}</small>
                       <button
                         type="button"
@@ -1706,6 +1740,14 @@ export default function AdminDashboard() {
                   >
                     <option value="CARD">卡片风格</option>
                     <option value="LIST">列表风格</option>
+                  </select>
+                  <select
+                    className="field-third"
+                    value={categoryDefaultSort}
+                    onChange={(event) => setCategoryDefaultSort(event.target.value as CategorySortMode)}
+                  >
+                    <option value="HOT">默认最热</option>
+                    <option value="LATEST">默认最新</option>
                   </select>
                   <div className="field-full modal-actions">
                     <button type="button" className="btn-ghost" onClick={() => setCategoryModalOpen(false)}>
