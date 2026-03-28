@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Eye, GitFork, Heart, Layers, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ClipboardList, Eye, GitFork, Heart, Layers, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -1281,13 +1281,16 @@ export default function AdminDashboard() {
                 <div className="admin-site-toolbar">
                   <h2>站点管理</h2>
                   <div className="admin-site-toolbar-actions">
-                    <input
-                      type="search"
-                      value={publishSearchInput}
-                      placeholder={publishCategoryFilter === "all" ? "搜索全站标题" : "搜索当前分类标题"}
-                      onChange={(event) => setPublishSearchInput(event.target.value)}
-                      aria-label="搜索发布站点标题"
-                    />
+                    <label className="search-shell search-shell-compact admin-site-toolbar-search">
+                      <Search size={16} aria-hidden="true" />
+                      <input
+                        type="search"
+                        value={publishSearchInput}
+                        placeholder={publishCategoryFilter === "all" ? "搜索全站" : "搜索分类"}
+                        onChange={(event) => setPublishSearchInput(event.target.value)}
+                        aria-label="搜索发布站点"
+                      />
+                    </label>
                     <select
                       value={publishCategoryFilter}
                       onChange={(event) => setPublishCategoryFilter(event.target.value)}

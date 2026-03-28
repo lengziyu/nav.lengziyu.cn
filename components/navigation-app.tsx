@@ -2,7 +2,7 @@
 
 import { CSSProperties, FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Heart } from "lucide-react";
+import { Eye, Heart, Search } from "lucide-react";
 
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -354,14 +354,17 @@ export default function NavigationApp() {
         </Link>
 
         <div className="nav-header-search">
-          <input
-            type="search"
-            className="nav-search-input"
-            placeholder="全局搜索标题，支持模糊匹配"
-            value={globalSearchInput}
-            onChange={(event) => setGlobalSearchInput(event.target.value)}
-            aria-label="全局搜索标题"
-          />
+          <label className="search-shell search-shell-large">
+            <Search size={18} aria-hidden="true" />
+            <input
+              type="search"
+              className="nav-search-input"
+              placeholder="搜索全站"
+              value={globalSearchInput}
+              onChange={(event) => setGlobalSearchInput(event.target.value)}
+              aria-label="搜索全站"
+            />
+          </label>
         </div>
 
         <div className="nav-header-actions">
@@ -407,14 +410,17 @@ export default function NavigationApp() {
             </div>
             <div className="content-head-actions">
               <div className="content-search-wrap">
-                <input
-                  type="search"
-                  className="content-search-input"
-                  placeholder={`搜索${activeCategory?.name ?? "当前分类"}标题`}
-                  value={categorySearchInput}
-                  onChange={(event) => setCategorySearchInput(event.target.value)}
-                  aria-label="分类下搜索标题"
-                />
+                <label className="search-shell search-shell-compact">
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    type="search"
+                    className="content-search-input"
+                    placeholder="搜索分类"
+                    value={categorySearchInput}
+                    onChange={(event) => setCategorySearchInput(event.target.value)}
+                    aria-label="搜索当前分类"
+                  />
+                </label>
               </div>
               <div className="content-sort-row" aria-label="站点排序方式">
                 <button
