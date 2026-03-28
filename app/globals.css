@@ -119,6 +119,40 @@ a {
   flex-shrink: 0;
 }
 
+.nav-header-search {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 220px;
+}
+
+.nav-search-input,
+.content-search-input,
+.admin-site-toolbar-actions input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--input-bg);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-search-input {
+  width: min(100%, 540px);
+  min-height: 48px;
+}
+
+.nav-search-input:focus,
+.content-search-input:focus,
+.admin-site-toolbar-actions input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--brand-blue) 45%, var(--line-strong));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-blue) 14%, transparent);
+}
+
 .brand-wrap {
   display: flex;
   align-items: center;
@@ -287,9 +321,29 @@ a {
   flex-wrap: wrap;
 }
 
+.content-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
 .content-head p {
   margin: 6px 0 0;
   color: var(--text-sub);
+}
+
+.content-search-wrap {
+  width: min(100%, 260px);
+  min-width: 220px;
+}
+
+.content-search-input {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 
 .content-sort-row {
@@ -1286,6 +1340,7 @@ a {
   flex-wrap: wrap;
 }
 
+.admin-site-toolbar-actions input,
 .admin-site-toolbar-actions select {
   min-width: 180px;
   border: 1px solid var(--line-strong);
@@ -2081,6 +2136,7 @@ html[data-theme="dark"] .admin-tag-chip {
     width: 100%;
   }
 
+  .admin-site-toolbar-actions input,
   .admin-site-toolbar-actions select {
     flex: 1;
     min-width: 160px;
@@ -2128,9 +2184,29 @@ html[data-theme="dark"] .admin-tag-chip {
     align-items: stretch;
   }
 
+  .nav-header-search {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .nav-search-input {
+    width: 100%;
+    max-width: none;
+  }
+
   .content-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .content-head-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .content-search-wrap {
+    width: 100%;
+    max-width: none;
   }
 
   .nav-header-actions,

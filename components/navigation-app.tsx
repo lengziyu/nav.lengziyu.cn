@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 
@@ -136,10 +136,31 @@ function compareByLatest(a: PublicSite, b: PublicSite) {
   );
 }
 
+function normalizeSearchText(value: string) {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+}
+
+function matchesTitleSearch(title: string, query: string) {
+  if (!query.trim()) {
+    return true;
+  }
+
+  const normalizedTitle = normalizeSearchText(title);
+  const keywords = query
+    .trim()
+    .split(/\s+/)
+    .map((keyword) => normalizeSearchText(keyword))
+    .filter(Boolean);
+
+  return keywords.every((keyword) => normalizedTitle.includes(keyword));
+}
+
 export default function NavigationApp() {
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [sortMode, setSortMode] = useState<SortMode>("hot");
+  const [globalSearchInput, setGlobalSearchInput] = useState("");
+  const [categorySearchInput, setCategorySearchInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
@@ -148,6 +169,8 @@ export default function NavigationApp() {
   const [recommendForm, setRecommendForm] = useState<RecommendForm>(initialForm);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const deferredGlobalSearch = useDeferredValue(globalSearchInput.trim());
+  const deferredCategorySearch = useDeferredValue(categorySearchInput.trim());
 
   useEffect(() => {
     void fetchNavigation();
@@ -165,14 +188,45 @@ export default function NavigationApp() {
     setSortMode(activeCategory.defaultSort === "LATEST" ? "latest" : "hot");
   }, [activeCategory]);
 
+  const allSites = useMemo(() => {
+    const siteMap = new Map<string, PublicSite>();
+
+    for (const category of categories) {
+      for (const site of category.sites) {
+        siteMap.set(site.id, site);
+      }
+    }
+
+    return [...siteMap.values()];
+  }, [categories]);
+
   const activeSites = useMemo(() => {
     if (!activeCategory) {
       return [];
     }
 
+    return activeCategory.sites.filter((site) => matchesTitleSearch(site.title, deferredCategorySearch));
+  }, [activeCategory, deferredCategorySearch]);
+
+  const visibleSites = useMemo(() => {
+    const baseSites = deferredGlobalSearch
+      ? allSites.filter((site) => matchesTitleSearch(site.title, deferredGlobalSearch))
+      : activeSites;
     const sorter = sortMode === "latest" ? compareByLatest : compareByHot;
-    return [...activeCategory.sites].sort(sorter);
-  }, [activeCategory, sortMode]);
+    return [...baseSites].sort(sorter);
+  }, [activeSites, allSites, deferredGlobalSearch, sortMode]);
+
+  const contentTitle = deferredGlobalSearch ? "全局搜索结果" : activeCategory?.name ?? "导航";
+  const contentDescription = deferredGlobalSearch
+    ? `按标题模糊匹配“${deferredGlobalSearch}”，共找到 ${visibleSites.length} 条结果`
+    : deferredCategorySearch
+      ? `在「${activeCategory?.name ?? "当前分类"}」中匹配“${deferredCategorySearch}”，共找到 ${visibleSites.length} 条结果`
+      : activeCategory?.description ?? "按分类浏览推荐网站";
+  const emptyMessage = deferredGlobalSearch
+    ? "全站没有搜到匹配标题，换个关键词试试。"
+    : deferredCategorySearch
+      ? "当前分类没有搜到匹配标题，换个关键词试试。"
+      : "当前分类还没有站点，先去推荐一个吧。";
 
   async function fetchNavigation() {
     setLoading(true);
@@ -206,6 +260,7 @@ export default function NavigationApp() {
     }
 
     setActiveCategoryId(categoryId);
+    setCategorySearchInput("");
     setSwitching(true);
     window.setTimeout(() => setSwitching(false), 180);
   }
@@ -298,6 +353,17 @@ export default function NavigationApp() {
           </div>
         </Link>
 
+        <div className="nav-header-search">
+          <input
+            type="search"
+            className="nav-search-input"
+            placeholder="全局搜索标题，支持模糊匹配"
+            value={globalSearchInput}
+            onChange={(event) => setGlobalSearchInput(event.target.value)}
+            aria-label="全局搜索标题"
+          />
+        </div>
+
         <div className="nav-header-actions">
           <ThemeToggle />
           <button type="button" className="recommend-btn" onClick={() => setShowRecommendModal(true)}>
@@ -336,24 +402,36 @@ export default function NavigationApp() {
         <main className="content-panel">
           <div className="content-head">
             <div>
-              <h2>{activeCategory?.name ?? "导航"}</h2>
-              <p>{activeCategory?.description ?? "按分类浏览推荐网站"}</p>
+              <h2>{contentTitle}</h2>
+              <p>{contentDescription}</p>
             </div>
-            <div className="content-sort-row" aria-label="站点排序方式">
-              <button
-                type="button"
-                className={`sort-chip ${sortMode === "hot" ? "active" : ""}`}
-                onClick={() => setSortMode("hot")}
-              >
-                最热
-              </button>
-              <button
-                type="button"
-                className={`sort-chip ${sortMode === "latest" ? "active" : ""}`}
-                onClick={() => setSortMode("latest")}
-              >
-                最新
-              </button>
+            <div className="content-head-actions">
+              <div className="content-search-wrap">
+                <input
+                  type="search"
+                  className="content-search-input"
+                  placeholder={`搜索${activeCategory?.name ?? "当前分类"}标题`}
+                  value={categorySearchInput}
+                  onChange={(event) => setCategorySearchInput(event.target.value)}
+                  aria-label="分类下搜索标题"
+                />
+              </div>
+              <div className="content-sort-row" aria-label="站点排序方式">
+                <button
+                  type="button"
+                  className={`sort-chip ${sortMode === "hot" ? "active" : ""}`}
+                  onClick={() => setSortMode("hot")}
+                >
+                  最热
+                </button>
+                <button
+                  type="button"
+                  className={`sort-chip ${sortMode === "latest" ? "active" : ""}`}
+                  onClick={() => setSortMode("latest")}
+                >
+                  最新
+                </button>
+              </div>
             </div>
           </div>
 
@@ -363,7 +441,7 @@ export default function NavigationApp() {
             <CardSkeleton />
           ) : activeCategory?.style === "LIST" ? (
             <div className="site-list-wrap">
-              {activeSites.map((site) => (
+              {visibleSites.map((site) => (
                 <article key={site.id} className="site-list-item" onClick={() => void onOpenSite(site)}>
                   <SiteCover site={site} mode="list" />
 
@@ -391,11 +469,11 @@ export default function NavigationApp() {
                   </div>
                 </article>
               ))}
-              {activeSites.length === 0 ? <EmptyState /> : null}
+              {visibleSites.length === 0 ? <EmptyState message={emptyMessage} /> : null}
             </div>
           ) : (
             <div className="site-card-grid">
-              {activeSites.map((site) => (
+              {visibleSites.map((site) => (
                 <SiteCard
                   key={site.id}
                   site={site}
@@ -403,7 +481,7 @@ export default function NavigationApp() {
                   onLike={onLike}
                 />
               ))}
-              {activeSites.length === 0 ? <EmptyState /> : null}
+              {visibleSites.length === 0 ? <EmptyState message={emptyMessage} /> : null}
             </div>
           )}
         </main>
@@ -501,8 +579,8 @@ function CardSkeleton() {
   );
 }
 
-function EmptyState() {
-  return <div className="empty-box">当前分类还没有站点，先去推荐一个吧。</div>;
+function EmptyState({ message }: { message: string }) {
+  return <div className="empty-box">{message}</div>;
 }
 
 function SiteCard({

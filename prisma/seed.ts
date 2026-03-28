@@ -126,8 +126,8 @@ const curatedSites: SeedSite[] = [
     url: "https://claude.ai",
     coverImageUrl:
       "https://images.unsplash.com/photo-1488229297570-58520851e868?auto=format&fit=crop&w=1200&q=80",
-    likes: 101,
-    views: 2680,
+    likes: 520,
+    views: 328000,
     tags: ["写作", "分析", "助手"],
   },
   {

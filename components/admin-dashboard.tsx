@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Eye, GitFork, Heart, Layers, Sparkles, Trash2, Upload, X } from "lucide-react";
 import {
@@ -112,6 +112,25 @@ const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
 const CHART_COLORS = ["#4f8cff", "#ff8a3d", "#53c2aa", "#8f7dff", "#ff6c8f", "#2b9dff"];
 const PUBLISH_PAGE_SIZE = 12;
 
+function normalizeSearchText(value: string) {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+}
+
+function matchesTitleSearch(title: string, query: string) {
+  if (!query.trim()) {
+    return true;
+  }
+
+  const normalizedTitle = normalizeSearchText(title);
+  const keywords = query
+    .trim()
+    .split(/\s+/)
+    .map((keyword) => normalizeSearchText(keyword))
+    .filter(Boolean);
+
+  return keywords.every((keyword) => normalizedTitle.includes(keyword));
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
 
@@ -141,6 +160,7 @@ export default function AdminDashboard() {
   const [siteModalMode, setSiteModalMode] = useState<"create" | "edit">("create");
   const [siteCoverUploading, setSiteCoverUploading] = useState(false);
   const [publishCategoryFilter, setPublishCategoryFilter] = useState("all");
+  const [publishSearchInput, setPublishSearchInput] = useState("");
   const [publishPage, setPublishPage] = useState(1);
   const [batchQuery, setBatchQuery] = useState("topic:ai stars:>1000");
   const [batchDrafts, setBatchDrafts] = useState<BatchSiteDraft[]>([]);
@@ -163,6 +183,7 @@ export default function AdminDashboard() {
     likes: 0,
     views: 0,
   });
+  const deferredPublishSearch = useDeferredValue(publishSearchInput.trim());
 
   const [reviewCategoryMap, setReviewCategoryMap] = useState<Record<string, string>>({});
   const aiModelsRequestIdRef = useRef(0);
@@ -246,11 +267,13 @@ export default function AdminDashboard() {
   }
 
   const filteredPublishSites = useMemo(() => {
-    if (publishCategoryFilter === "all") {
-      return sites;
-    }
-    return sites.filter((site) => site.category.id === publishCategoryFilter);
-  }, [publishCategoryFilter, sites]);
+    const scopedSites =
+      publishCategoryFilter === "all"
+        ? sites
+        : sites.filter((site) => site.category.id === publishCategoryFilter);
+
+    return scopedSites.filter((site) => matchesTitleSearch(site.title, deferredPublishSearch));
+  }, [deferredPublishSearch, publishCategoryFilter, sites]);
 
   const publishTotalPages = Math.max(1, Math.ceil(filteredPublishSites.length / PUBLISH_PAGE_SIZE));
 
@@ -326,7 +349,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setPublishPage(1);
-  }, [publishCategoryFilter]);
+  }, [deferredPublishSearch, publishCategoryFilter]);
 
   useEffect(() => {
     if (publishPage > publishTotalPages) {
@@ -1258,6 +1281,13 @@ export default function AdminDashboard() {
                 <div className="admin-site-toolbar">
                   <h2>站点管理</h2>
                   <div className="admin-site-toolbar-actions">
+                    <input
+                      type="search"
+                      value={publishSearchInput}
+                      placeholder={publishCategoryFilter === "all" ? "搜索全站标题" : "搜索当前分类标题"}
+                      onChange={(event) => setPublishSearchInput(event.target.value)}
+                      aria-label="搜索发布站点标题"
+                    />
                     <select
                       value={publishCategoryFilter}
                       onChange={(event) => setPublishCategoryFilter(event.target.value)}
@@ -1301,7 +1331,13 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                   {!loading && filteredPublishSites.length === 0 ? (
-                    <div className="admin-empty">当前分类下暂无站点</div>
+                    <div className="admin-empty">
+                      {deferredPublishSearch
+                        ? "没有搜到匹配标题，换个关键词试试。"
+                        : publishCategoryFilter === "all"
+                          ? "当前暂无已发布站点"
+                          : "当前分类下暂无站点"}
+                    </div>
                   ) : null}
                 </div>
 
