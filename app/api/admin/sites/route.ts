@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   const sites = await prisma.site.findMany({
-    orderBy: [{ views: "desc" }, { likes: "desc" }, { updatedAt: "desc" }],
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { views: "desc" }, { likes: "desc" }],
     include: {
       category: {
         select: {
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       },
       tags: true,
     },
-    take: 120,
   });
 
   return NextResponse.json({ sites });
