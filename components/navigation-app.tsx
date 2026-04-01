@@ -696,16 +696,20 @@ function SiteCover({ site, mode }: { site: PublicSite; mode: "card" | "list" }) 
   if (generated) {
     return (
       <div className={`${className} generated-cover`} style={getGeneratedCoverStyle(site)}>
-        {site.coverImageUrl ? (
-          <div className="generated-cover-badge">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={site.coverImageUrl} alt={site.title} />
-          </div>
-        ) : (
-          <div className="generated-cover-badge fallback" aria-hidden="true">
-            {site.title.slice(0, 1)}
-          </div>
-        )}
+        {mode === "card"
+          ? site.coverImageUrl
+            ? (
+              <div className="generated-cover-badge">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={site.coverImageUrl} alt={site.title} />
+              </div>
+            )
+            : (
+              <div className="generated-cover-badge fallback" aria-hidden="true">
+                {site.title.slice(0, 1)}
+              </div>
+            )
+          : null}
         <div className={`generated-cover-content ${mode}`}>
           <strong>{site.title}</strong>
         </div>
