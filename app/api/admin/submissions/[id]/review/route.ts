@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { isAdminRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFallbackColor, normalizeTagList, slugify } from "@/lib/utils";
+import { ensureTagIds } from "@/lib/tag-helpers";
+import { getFallbackColor, normalizeTagList } from "@/lib/utils";
 import { reviewSubmissionSchema } from "@/lib/validators";
 
 export async function POST(
@@ -65,47 +67,55 @@ export async function POST(
 
   const tags = normalizeTagList(submission.tags);
 
-  const result = await prisma.$transaction(async (tx) => {
-    const site = await tx.site.create({
-      data: {
-        title: submission.title,
-        description: submission.description,
-        url: submission.url,
-        coverImageUrl: submission.coverImageUrl,
-        fallbackColor: submission.fallbackColor || getFallbackColor(submission.title),
-        categoryId,
-        publisherType: "GUEST",
-        publisherName: submission.proposerName,
-        tags: {
-          connectOrCreate: tags.map((tag) => ({
-            where: { name: tag },
-            create: {
-              name: tag,
-              slug: slugify(tag) || `tag-${Math.random().toString(36).slice(2, 10)}`,
-            },
-          })),
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const tagIds = await ensureTagIds(tx, tags);
+
+      const site = await tx.site.create({
+        data: {
+          title: submission.title,
+          description: submission.description,
+          url: submission.url,
+          coverImageUrl: submission.coverImageUrl,
+          fallbackColor: submission.fallbackColor || getFallbackColor(submission.title),
+          categoryId,
+          publisherType: "GUEST",
+          publisherName: submission.proposerName,
+          tags: {
+            connect: tagIds.map((tagId) => ({ id: tagId })),
+          },
         },
-      },
-      include: {
-        tags: true,
-      },
+        include: {
+          tags: true,
+        },
+      });
+
+      const reviewedSubmission = await tx.submission.update({
+        where: { id },
+        data: {
+          status: "APPROVED",
+          reviewNote,
+          reviewedAt: new Date(),
+          categoryId,
+        },
+      });
+
+      return {
+        site,
+        submission: reviewedSubmission,
+      };
     });
 
-    const reviewedSubmission = await tx.submission.update({
-      where: { id },
-      data: {
-        status: "APPROVED",
-        reviewNote,
-        reviewedAt: new Date(),
-        categoryId,
-      },
-    });
-
-    return {
-      site,
-      submission: reviewedSubmission,
-    };
-  });
-
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return NextResponse.json({ message: "发布站点时数据冲突，请检查 URL 或标签是否重复" }, { status: 400 });
+      }
+      if (error.code === "P2003") {
+        return NextResponse.json({ message: "分类不存在或已失效，请刷新页面后重试" }, { status: 400 });
+      }
+    }
+    return NextResponse.json({ message: "审核失败，请稍后重试" }, { status: 400 });
+  }
 }

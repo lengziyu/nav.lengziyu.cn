@@ -4,6 +4,8 @@ import { isAdminRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { listSubmissionSchema } from "@/lib/validators";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   if (!isAdminRequest(request)) {
     return NextResponse.json({ message: "未登录" }, { status: 401 });

@@ -292,8 +292,11 @@ export default function AdminDashboard() {
 
   const fetchJson = useCallback(
     async <T,>(path: string, init?: RequestInit) => {
+      const method = (init?.method ?? "GET").toUpperCase();
+
       const response = await fetch(path, {
         ...init,
+        cache: method === "GET" ? "no-store" : init?.cache,
         headers: {
           "Content-Type": "application/json",
           ...(init?.headers ?? {}),
@@ -331,15 +334,33 @@ export default function AdminDashboard() {
       setCategories(categoryResult.categories);
       setSubmissions(submissionResult.submissions);
       setSites(siteResult.sites);
-      setSiteCategoryId((prev) => prev || categoryResult.categories[0]?.id || "");
+      setSiteCategoryId((prev) => {
+        if (prev && categoryResult.categories.some((category) => category.id === prev)) {
+          return prev;
+        }
+        return categoryResult.categories[0]?.id || "";
+      });
 
       setReviewCategoryMap((prev) => {
-        const next = { ...prev };
+        const next: Record<string, string> = {};
+        const availableCategoryIds = new Set(categoryResult.categories.map((item) => item.id));
+        const fallbackCategoryId = categoryResult.categories[0]?.id ?? "";
 
         for (const submission of submissionResult.submissions) {
-          if (!next[submission.id]) {
-            next[submission.id] = submission.categoryId ?? categoryResult.categories[0]?.id ?? "";
+          const current = prev[submission.id] ?? "";
+          const submissionCategory = submission.categoryId ?? "";
+
+          if (current && availableCategoryIds.has(current)) {
+            next[submission.id] = current;
+            continue;
           }
+
+          if (submissionCategory && availableCategoryIds.has(submissionCategory)) {
+            next[submission.id] = submissionCategory;
+            continue;
+          }
+
+          next[submission.id] = fallbackCategoryId;
         }
 
         return next;
@@ -523,7 +544,12 @@ export default function AdminDashboard() {
   function onOpenCreateSiteModal() {
     resetSiteForm();
     setSiteModalMode("create");
-    setSiteCategoryId((prev) => prev || categories[0]?.id || "");
+    setSiteCategoryId((prev) => {
+      if (prev && categories.some((category) => category.id === prev)) {
+        return prev;
+      }
+      return categories[0]?.id || "";
+    });
     setSiteModalOpen(true);
   }
 
@@ -859,13 +885,21 @@ export default function AdminDashboard() {
   }
 
   async function ensureSiteCategoryId() {
-    if (siteCategoryId) {
+    const availableCategoryIds = new Set(categories.map((item) => item.id));
+
+    if (siteCategoryId && availableCategoryIds.has(siteCategoryId)) {
       return siteCategoryId;
+    }
+
+    const fallbackCategoryId = categories[0]?.id ?? "";
+    if (fallbackCategoryId) {
+      setSiteCategoryId(fallbackCategoryId);
+      return fallbackCategoryId;
     }
 
     const newCategoryName = suggestedCategoryName.trim();
     if (!autoCreateCategory || !newCategoryName) {
-      throw new Error("请先选择分类，或启用自动创建分类");
+      throw new Error("请先创建或选择分类后再发布");
     }
 
     const created = await fetchJson<{ category: AdminCategory }>("/api/admin/categories", {
@@ -1009,11 +1043,21 @@ export default function AdminDashboard() {
     setMessage("");
 
     try {
+      const resolvedCategoryId =
+        action === "approve"
+          ? reviewCategoryMap[submission.id] || submission.categoryId || categories[0]?.id || ""
+          : undefined;
+
+      if (action === "approve" && !resolvedCategoryId) {
+        setMessage("请先创建或选择分类后再通过");
+        return;
+      }
+
       await fetchJson<{ ok?: boolean }>(`/api/admin/submissions/${submission.id}/review`, {
         method: "POST",
         body: JSON.stringify({
           action,
-          categoryId: action === "approve" ? reviewCategoryMap[submission.id] : undefined,
+          categoryId: resolvedCategoryId,
         }),
       });
 

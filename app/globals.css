@@ -97,7 +97,7 @@ a {
 
 .nav-page {
   height: 100vh;
-  padding: 20px;
+  padding: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -109,7 +109,7 @@ a {
   align-items: center;
   gap: 14px;
   padding: 14px 18px;
-  border-radius: 16px;
+  border-radius: 0;
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: 0 8px 24px rgba(13, 30, 65, 0.06);
@@ -355,6 +355,7 @@ a {
 
 .nav-body {
   margin-top: 14px;
+  padding: 0 20px 20px;
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
   gap: 14px;
@@ -373,6 +374,11 @@ a {
   border-radius: 16px;
   background: var(--panel);
   box-shadow: var(--shadow-soft);
+}
+
+.category-panel,
+.content-panel {
+  border-radius: 10px;
 }
 
 .category-panel {
@@ -1275,7 +1281,7 @@ a {
 
 .admin-shell {
   height: 100vh;
-  padding: 16px;
+  padding: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1287,6 +1293,7 @@ a {
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
+  border-radius: 0;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -1325,6 +1332,7 @@ a {
 
 .admin-layout {
   margin-top: 12px;
+  padding: 0 16px 16px;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 12px;
@@ -1335,6 +1343,7 @@ a {
 
 .admin-sidebar {
   padding: 12px;
+  border-radius: 10px;
   position: sticky;
   top: 0;
   height: 100%;
@@ -1371,9 +1380,12 @@ a {
 }
 
 .admin-main {
-  padding: 12px;
+  padding: 16px 12px;
+  border-radius: 10px;
   height: 100%;
   overflow: auto;
+  scroll-padding-top: 10px;
+  scroll-padding-bottom: 10px;
 }
 
 .admin-panel-group {
@@ -2377,9 +2389,20 @@ html[data-theme="dark"] .sidebar-link-inline i {
 }
 
 @media (max-width: 640px) {
-  .nav-page,
+  .nav-page {
+    padding: 0;
+  }
+
   .admin-shell {
-    padding: 12px;
+    padding: 0;
+  }
+
+  .nav-body {
+    padding: 0 12px 12px;
+  }
+
+  .admin-layout {
+    padding: 0 12px 12px;
   }
 
   .site-card-grid,

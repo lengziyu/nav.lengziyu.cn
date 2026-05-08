@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
 import { createCategorySchema } from "@/lib/validators";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   if (!isAdminRequest(request)) {
     return NextResponse.json({ message: "未登录" }, { status: 401 });
