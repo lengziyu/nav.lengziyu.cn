@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "carrot:cleanup": "tsx scripts/cleanup-carrot-import.ts",
+    "hot:import": "tsx scripts/import-hot-ai-sites.ts",
     "carrot:sync": "node scripts/update-carrot-snapshot.mjs",
     "frontend:sync": "node scripts/update-frontend-snapshot.mjs"
   },

@@ -105,6 +105,7 @@ type BatchQueryPreset = {
   key: string;
   label: string;
   query: string;
+  categoryName?: string;
 };
 
 const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
@@ -117,42 +118,50 @@ const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
 
 const CHART_COLORS = ["#4f8cff", "#ff8a3d", "#53c2aa", "#8f7dff", "#ff6c8f", "#2b9dff"];
 const PUBLISH_PAGE_SIZE = 12;
+const BATCH_LIMIT_OPTIONS = [10, 20, 30, 50];
 const BATCH_QUERY_PRESETS: BatchQueryPreset[] = [
-  { key: "all", label: "全部 AI（热门）", query: "topic:ai stars:>1000" },
+  { key: "all", label: "全部分类（最热门）", query: "topic:ai stars:>800" },
   {
     key: "agent",
     label: "AI Agent 自动化",
-    query: "topic:ai-agent OR topic:agent framework pushed:>=2026-03-01 stars:>80",
+    query: "topic:agent stars:>120 pushed:>=2025-01-01",
+    categoryName: "AI Agent 自动化",
   },
   {
     key: "coding",
     label: "AI 编程开发",
-    query: "topic:ai coding-assistant OR llm framework pushed:>=2026-03-01 stars:>100",
+    query: "topic:ai coding stars:>120 pushed:>=2025-01-01",
+    categoryName: "AI 编程开发",
   },
   {
     key: "image-video",
     label: "AI 图像与视频",
-    query: "topic:diffusion OR text-to-image OR text-to-video pushed:>=2026-03-01 stars:>80",
+    query: "topic:text-to-image OR topic:diffusion stars:>80 pushed:>=2025-01-01",
+    categoryName: "AI 图像与视频",
   },
   {
     key: "model-platform",
     label: "AI 模型与平台",
-    query: "topic:llm OR inference OR model-serving pushed:>=2026-03-01 stars:>120",
+    query: "topic:llm OR topic:inference stars:>120 pushed:>=2025-01-01",
+    categoryName: "AI 模型与平台",
   },
   {
     key: "apps",
     label: "AI 应用与工作台",
-    query: "topic:ai productivity OR workflow automation pushed:>=2026-03-01 stars:>60",
+    query: "topic:ai productivity stars:>80 pushed:>=2025-01-01",
+    categoryName: "AI 应用与工作台",
   },
   {
     key: "tools",
     label: "AI 辅助工具",
-    query: "topic:ai-tooling OR prompt OR rag pushed:>=2026-03-01 stars:>60",
+    query: "topic:ai-tools OR topic:productivity stars:>80 pushed:>=2025-01-01",
+    categoryName: "AI 辅助工具",
   },
   {
     key: "audio",
     label: "AI 音频",
-    query: "topic:text-to-speech OR speech-to-text OR voice-ai pushed:>=2026-03-01 stars:>60",
+    query: "topic:text-to-speech OR topic:speech-to-text stars:>80 pushed:>=2025-01-01",
+    categoryName: "AI 音频",
   },
   { key: "custom", label: "自定义关键词", query: "" },
 ];
@@ -210,6 +219,7 @@ export default function AdminDashboard() {
   const [publishPage, setPublishPage] = useState(1);
   const [batchQuery, setBatchQuery] = useState(DEFAULT_BATCH_QUERY);
   const [batchQueryPresetKey, setBatchQueryPresetKey] = useState(BATCH_QUERY_PRESETS[0].key);
+  const [batchLimit, setBatchLimit] = useState(10);
   const [batchDrafts, setBatchDrafts] = useState<BatchSiteDraft[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchPublishing, setBatchPublishing] = useState(false);
@@ -754,13 +764,19 @@ export default function AdminDashboard() {
 
     try {
       const query = batchQuery.trim() || DEFAULT_BATCH_QUERY;
+      const selectedPreset = BATCH_QUERY_PRESETS.find((item) => item.key === batchQueryPresetKey);
+      const forcedCategoryName = selectedPreset?.categoryName ?? "";
+      const forcedCategory = forcedCategoryName
+        ? categories.find((item) => item.name.trim().toLowerCase() === forcedCategoryName.trim().toLowerCase())
+        : undefined;
+
       const repoResult = await fetchJson<{ repos: GithubRepoDraft[] }>(
-        `/api/admin/github/repos?query=${encodeURIComponent(query)}&limit=10`,
+        `/api/admin/github/repos?query=${encodeURIComponent(query)}&limit=${batchLimit}`,
       );
       const repos = repoResult.repos ?? [];
 
       if (repos.length === 0) {
-        setBatchProgress("没有抓取到仓库，请调整关键词重试");
+        setBatchProgress("没有抓取到可新增的仓库（已自动排除站内已有链接），请调整关键词重试");
         return;
       }
 
@@ -803,9 +819,9 @@ export default function AdminDashboard() {
             description: data.description || repo.description || "",
             url: repo.homepage || repo.url,
             coverImageUrl: data.coverImageUrl || repo.coverImageUrl,
-            categoryId: data.matchedCategoryId || "",
-            suggestedCategoryName: data.categoryName || "",
-            suggestedCategoryStyle: data.categoryStyle || "CARD",
+            categoryId: forcedCategory?.id || data.matchedCategoryId || "",
+            suggestedCategoryName: forcedCategoryName || data.categoryName || "",
+            suggestedCategoryStyle: forcedCategory?.style || data.categoryStyle || "CARD",
             tags: data.tags ?? [],
           });
         } catch {
@@ -818,9 +834,9 @@ export default function AdminDashboard() {
               `${repo.fullName} 是一个热门开源 AI 项目，建议补充简介后再发布。`,
             url: repo.homepage || repo.url,
             coverImageUrl: repo.coverImageUrl,
-            categoryId: "",
-            suggestedCategoryName: "",
-            suggestedCategoryStyle: "CARD",
+            categoryId: forcedCategory?.id || "",
+            suggestedCategoryName: forcedCategoryName || "",
+            suggestedCategoryStyle: forcedCategory?.style || "CARD",
             tags: [repo.language, ...repo.topics, "开源"].filter(Boolean).slice(0, 8),
           });
         }
@@ -1495,6 +1511,16 @@ export default function AdminDashboard() {
                       </option>
                     ))}
                   </select>
+                  <select
+                    value={String(batchLimit)}
+                    onChange={(event) => setBatchLimit(Number(event.target.value))}
+                  >
+                    {BATCH_LIMIT_OPTIONS.map((limit) => (
+                      <option key={limit} value={limit}>
+                        抓取 {limit} 条
+                      </option>
+                    ))}
+                  </select>
                   <input
                     value={batchQuery}
                     placeholder="GitHub 搜索关键词，例如 topic:agent stars:>1000"
@@ -1530,7 +1556,7 @@ export default function AdminDashboard() {
                     disabled={batchLoading || aiModelsLoading || batchPublishing || !aiModel}
                     onClick={() => void onFetchGithubBatch()}
                   >
-                    {batchLoading ? "抓取并分析中..." : "批量抓取 10 条"}
+                    {batchLoading ? "抓取并分析中..." : `批量抓取 ${batchLimit} 条`}
                   </button>
                 </div>
 
