@@ -101,6 +101,12 @@ type BatchSiteDraft = {
   tags: string[];
 };
 
+type BatchQueryPreset = {
+  key: string;
+  label: string;
+  query: string;
+};
+
 const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
   { key: "overview", label: "仪表盘", desc: "总览" },
   { key: "categories", label: "分类管理", desc: "目录风格" },
@@ -111,6 +117,46 @@ const MENUS: Array<{ key: AdminMenuKey; label: string; desc: string }> = [
 
 const CHART_COLORS = ["#4f8cff", "#ff8a3d", "#53c2aa", "#8f7dff", "#ff6c8f", "#2b9dff"];
 const PUBLISH_PAGE_SIZE = 12;
+const BATCH_QUERY_PRESETS: BatchQueryPreset[] = [
+  { key: "all", label: "全部 AI（热门）", query: "topic:ai stars:>1000" },
+  {
+    key: "agent",
+    label: "AI Agent 自动化",
+    query: "topic:ai-agent OR topic:agent framework pushed:>=2026-03-01 stars:>80",
+  },
+  {
+    key: "coding",
+    label: "AI 编程开发",
+    query: "topic:ai coding-assistant OR llm framework pushed:>=2026-03-01 stars:>100",
+  },
+  {
+    key: "image-video",
+    label: "AI 图像与视频",
+    query: "topic:diffusion OR text-to-image OR text-to-video pushed:>=2026-03-01 stars:>80",
+  },
+  {
+    key: "model-platform",
+    label: "AI 模型与平台",
+    query: "topic:llm OR inference OR model-serving pushed:>=2026-03-01 stars:>120",
+  },
+  {
+    key: "apps",
+    label: "AI 应用与工作台",
+    query: "topic:ai productivity OR workflow automation pushed:>=2026-03-01 stars:>60",
+  },
+  {
+    key: "tools",
+    label: "AI 辅助工具",
+    query: "topic:ai-tooling OR prompt OR rag pushed:>=2026-03-01 stars:>60",
+  },
+  {
+    key: "audio",
+    label: "AI 音频",
+    query: "topic:text-to-speech OR speech-to-text OR voice-ai pushed:>=2026-03-01 stars:>60",
+  },
+  { key: "custom", label: "自定义关键词", query: "" },
+];
+const DEFAULT_BATCH_QUERY = BATCH_QUERY_PRESETS[0].query;
 
 function normalizeSearchText(value: string) {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
@@ -162,7 +208,8 @@ export default function AdminDashboard() {
   const [publishCategoryFilter, setPublishCategoryFilter] = useState("all");
   const [publishSearchInput, setPublishSearchInput] = useState("");
   const [publishPage, setPublishPage] = useState(1);
-  const [batchQuery, setBatchQuery] = useState("topic:ai stars:>1000");
+  const [batchQuery, setBatchQuery] = useState(DEFAULT_BATCH_QUERY);
+  const [batchQueryPresetKey, setBatchQueryPresetKey] = useState(BATCH_QUERY_PRESETS[0].key);
   const [batchDrafts, setBatchDrafts] = useState<BatchSiteDraft[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchPublishing, setBatchPublishing] = useState(false);
@@ -706,7 +753,7 @@ export default function AdminDashboard() {
     setBatchDrafts([]);
 
     try {
-      const query = batchQuery.trim() || "topic:ai stars:>1000";
+      const query = batchQuery.trim() || DEFAULT_BATCH_QUERY;
       const repoResult = await fetchJson<{ repos: GithubRepoDraft[] }>(
         `/api/admin/github/repos?query=${encodeURIComponent(query)}&limit=10`,
       );
@@ -1431,10 +1478,30 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="github-batch-toolbar">
+                  <select
+                    value={batchQueryPresetKey}
+                    onChange={(event) => {
+                      const presetKey = event.target.value;
+                      setBatchQueryPresetKey(presetKey);
+                      const preset = BATCH_QUERY_PRESETS.find((item) => item.key === presetKey);
+                      if (preset && preset.query) {
+                        setBatchQuery(preset.query);
+                      }
+                    }}
+                  >
+                    {BATCH_QUERY_PRESETS.map((preset) => (
+                      <option key={preset.key} value={preset.key}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     value={batchQuery}
                     placeholder="GitHub 搜索关键词，例如 topic:agent stars:>1000"
-                    onChange={(event) => setBatchQuery(event.target.value)}
+                    onChange={(event) => {
+                      setBatchQuery(event.target.value);
+                      setBatchQueryPresetKey("custom");
+                    }}
                   />
                   <select
                     value={aiProvider}
