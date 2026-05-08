@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Eye, GitFork, Heart, Layers, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Bookmark, ClipboardList, Eye, GitFork, Heart, Layers, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -98,6 +98,15 @@ type BatchSiteDraft = {
   categoryId: string;
   suggestedCategoryName: string;
   suggestedCategoryStyle: CategoryStyle;
+  tags: string[];
+};
+
+type XBookmarkLinkDraft = {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  coverImageUrl: string;
   tags: string[];
 };
 
@@ -224,6 +233,9 @@ export default function AdminDashboard() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchPublishing, setBatchPublishing] = useState(false);
   const [batchProgress, setBatchProgress] = useState("");
+  const [xBookmarkText, setXBookmarkText] = useState("");
+  const [xBookmarkLoading, setXBookmarkLoading] = useState(false);
+  const [xBookmarkLimit, setXBookmarkLimit] = useState(20);
   const [aiAnalyzeUrl, setAiAnalyzeUrl] = useState("");
   const [aiModels, setAiModels] = useState<string[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>("openrouter");
@@ -558,6 +570,35 @@ export default function AdminDashboard() {
     setBatchDrafts((prev) => prev.filter((item) => item.id !== id));
   }
 
+  function getSelectedBatchCategory() {
+    const selectedPreset = BATCH_QUERY_PRESETS.find((item) => item.key === batchQueryPresetKey);
+    const forcedCategoryName = selectedPreset?.categoryName ?? "";
+    const forcedCategory = forcedCategoryName
+      ? categories.find((item) => item.name.trim().toLowerCase() === forcedCategoryName.trim().toLowerCase())
+      : undefined;
+
+    return {
+      forcedCategory,
+      forcedCategoryName,
+    };
+  }
+
+  function isLikelyAiRelated(input: {
+    title: string;
+    description: string;
+    tags: string[];
+    categoryName?: string;
+  }) {
+    const text = [
+      input.title,
+      input.description,
+      input.categoryName ?? "",
+      ...input.tags,
+    ].join(" ").toLowerCase();
+
+    return /ai|人工智能|智能|大模型|模型|llm|agent|rag|prompt|openai|chatgpt|claude|gemini|grok|deepseek|midjourney|diffusion|copilot|cursor|生成|语音|图像|视频|自动化|助手|workflow|automation|coding assistant/.test(text);
+  }
+
   function addTagFromInput() {
     const tags = parseTagInput(siteTagInput);
     if (tags.length === 0) {
@@ -764,11 +805,7 @@ export default function AdminDashboard() {
 
     try {
       const query = batchQuery.trim() || DEFAULT_BATCH_QUERY;
-      const selectedPreset = BATCH_QUERY_PRESETS.find((item) => item.key === batchQueryPresetKey);
-      const forcedCategoryName = selectedPreset?.categoryName ?? "";
-      const forcedCategory = forcedCategoryName
-        ? categories.find((item) => item.name.trim().toLowerCase() === forcedCategoryName.trim().toLowerCase())
-        : undefined;
+      const { forcedCategory, forcedCategoryName } = getSelectedBatchCategory();
 
       const repoResult = await fetchJson<{ repos: GithubRepoDraft[] }>(
         `/api/admin/github/repos?query=${encodeURIComponent(query)}&limit=${batchLimit}`,
@@ -848,6 +885,113 @@ export default function AdminDashboard() {
       setBatchProgress(error instanceof Error ? error.message : "批量抓取失败");
     } finally {
       setBatchLoading(false);
+    }
+  }
+
+  async function onImportXBookmarks() {
+    setBatchProgress("");
+
+    if (!xBookmarkText.trim()) {
+      setBatchProgress("请先粘贴 X 书签内容或链接");
+      return;
+    }
+
+    setXBookmarkLoading(true);
+    setBatchDrafts([]);
+
+    try {
+      const { forcedCategory, forcedCategoryName } = getSelectedBatchCategory();
+      const result = await fetchJson<{ scanned: number; links: XBookmarkLinkDraft[] }>("/api/admin/x-bookmarks/links", {
+        method: "POST",
+        body: JSON.stringify({
+          text: xBookmarkText,
+          limit: xBookmarkLimit,
+        }),
+      });
+
+      if (result.links.length === 0) {
+        setBatchProgress(`已扫描 ${result.scanned} 个链接，但没有找到可新增的外部网站`);
+        return;
+      }
+
+      const drafts: BatchSiteDraft[] = [];
+
+      for (let index = 0; index < result.links.length; index += 1) {
+        const link = result.links[index];
+        setBatchProgress(`正在整理 X 书签 ${index + 1}/${result.links.length}：${link.title}`);
+
+        let draft: BatchSiteDraft = {
+          id: `x-${link.id}-${index}`,
+          sourceUrl: link.url,
+          title: link.title,
+          description: link.description,
+          url: link.url,
+          coverImageUrl: link.coverImageUrl,
+          categoryId: forcedCategory?.id || "",
+          suggestedCategoryName: forcedCategoryName || "",
+          suggestedCategoryStyle: forcedCategory?.style || "CARD",
+          tags: link.tags,
+        };
+
+        if (aiModel) {
+          try {
+            const analyzed = await fetchJson<{
+              data?: {
+                title: string;
+                description: string;
+                tags: string[];
+                coverImageUrl: string;
+                categoryName: string;
+                categoryStyle: CategoryStyle;
+                matchedCategoryId: string;
+              };
+            }>("/api/admin/ai/analyze", {
+              method: "POST",
+              body: JSON.stringify({
+                url: link.url,
+                provider: aiProvider,
+                model: aiModel,
+              }),
+            });
+
+            if (analyzed.data) {
+              draft = {
+                ...draft,
+                title: analyzed.data.title || draft.title,
+                description: analyzed.data.description || draft.description,
+                coverImageUrl: analyzed.data.coverImageUrl || draft.coverImageUrl,
+                categoryId: forcedCategory?.id || analyzed.data.matchedCategoryId || "",
+                suggestedCategoryName: forcedCategoryName || analyzed.data.categoryName || "",
+                suggestedCategoryStyle: forcedCategory?.style || analyzed.data.categoryStyle || "CARD",
+                tags: analyzed.data.tags?.length ? analyzed.data.tags : draft.tags,
+              };
+            }
+          } catch {
+            // 使用链接元信息生成草稿即可，保留用户可编辑流程。
+          }
+        }
+
+        if (forcedCategoryName || isLikelyAiRelated({
+          title: draft.title,
+          description: draft.description,
+          tags: draft.tags,
+          categoryName: draft.suggestedCategoryName,
+        })) {
+          drafts.push(draft);
+        }
+      }
+
+      if (drafts.length === 0) {
+        setBatchProgress("已扫描链接，但没有识别到 AI 相关网站");
+        return;
+      }
+
+      setBatchDrafts(drafts);
+      setBatchProgress(`已从 X 书签生成 ${drafts.length} 条 AI 相关草稿，可检查后批量发布`);
+    } catch (error) {
+      setBatchProgress(error instanceof Error ? error.message : "X 书签导入失败");
+    } finally {
+      setXBookmarkLoading(false);
     }
   }
 
@@ -1558,6 +1702,45 @@ export default function AdminDashboard() {
                   >
                     {batchLoading ? "抓取并分析中..." : `批量抓取 ${batchLimit} 条`}
                   </button>
+                </div>
+
+                <div className="x-bookmark-import-panel">
+                  <div className="x-bookmark-import-head">
+                    <h3><Bookmark size={16} /> X 书签链接导入</h3>
+                    <select
+                      value={String(xBookmarkLimit)}
+                      onChange={(event) => setXBookmarkLimit(Number(event.target.value))}
+                    >
+                      {BATCH_LIMIT_OPTIONS.map((limit) => (
+                        <option key={limit} value={limit}>
+                          最多 {limit} 条
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea
+                    value={xBookmarkText}
+                    placeholder="粘贴从 X 书签复制出来的内容或链接，支持 t.co 短链"
+                    onChange={(event) => setXBookmarkText(event.target.value)}
+                  />
+                  <div className="x-bookmark-import-actions">
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      disabled={xBookmarkLoading}
+                      onClick={() => setXBookmarkText("")}
+                    >
+                      清空
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={xBookmarkLoading}
+                      onClick={() => void onImportXBookmarks()}
+                    >
+                      {xBookmarkLoading ? "整理中..." : "从 X 书签生成草稿"}
+                    </button>
+                  </div>
                 </div>
 
                 {batchProgress ? <div className="github-batch-progress">{batchProgress}</div> : null}
