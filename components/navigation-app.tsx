@@ -100,7 +100,7 @@ function isCompactLogoCover(url: string | null) {
     return false;
   }
 
-  return /ai55\.cc|site-icons|favicon|\.ico(?:$|\?)/i.test(url);
+  return /ai55\.cc|site-icons|favicon|google\.com\/s2\/favicons|\.ico(?:$|\?)/i.test(url);
 }
 
 function shouldUseGeneratedCover(site: PublicSite) {
